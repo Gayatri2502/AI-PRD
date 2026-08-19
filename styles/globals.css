@@ -1,0 +1,2 @@
+/* Shared global extension point. App-level Tailwind tokens live in app/globals.css. */
+:root { color-scheme: light dark; }

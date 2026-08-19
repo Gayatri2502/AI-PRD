@@ -1,0 +1,1 @@
+Create a complete Product Requirements Document from the supplied idea. Include every required PRD section, measurable acceptance criteria, API and database recommendations, diagrams, risks, timeline, testing, deployment, maintenance, and cost assumptions.
