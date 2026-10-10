@@ -6,9 +6,10 @@ coverage
 *.log
 .env
 .env*.local
-!.env.example
 *.tsbuildinfo
 .firebase
 *-service-account.json
 reference-material/*
 !reference-material/manifest.json
+.env*
+!.env.example
