@@ -7,4 +7,8 @@ coverage
 .env
 .env*.local
 !.env.example
-database/dev.db
+*.tsbuildinfo
+.firebase
+*-service-account.json
+reference-material/*
+!reference-material/manifest.json

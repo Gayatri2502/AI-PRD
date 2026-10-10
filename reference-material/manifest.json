@@ -1,0 +1,50 @@
+[
+  {
+    "url": "https://www.ltfinance.com/blog/business-loan/project-report-for-business-loan",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:20.249Z",
+    "status": "retrieved",
+    "sha256": "a966a0b716203cfa90ecad847c1d076547b5691b6f3f8310273a224973abf29e",
+    "file": "a966a0b71620"
+  },
+  {
+    "url": "https://fortriskconsulting.com/wp-content/uploads/2021/04/CMA-Sample-report.pdf",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:22.096Z",
+    "status": "retrieved",
+    "sha256": "ef0487efc4709773b69b2c1567833cc6c4bf571d57c4df881f84826c07c0f988",
+    "file": "ef0487efc470"
+  },
+  {
+    "url": "https://www.finline.in/CMA.pdf",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:24.937Z",
+    "status": "retrieved",
+    "sha256": "8da89a26e1fe1c3a916b0fc6d9c99590b16c00198e68b0cf6e5dbb9fa47920ad",
+    "file": "8da89a26e1fe"
+  },
+  {
+    "url": "https://jsconsultancy.co.in/tools/cma/Sample-CMA-Report.pdf",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:26.795Z",
+    "status": "retrieved",
+    "sha256": "30316c3716c447fe488f2d1175efa61b86dc31ae3cd4fa3d328283e72f9fa52c",
+    "file": "30316c3716c4"
+  },
+  {
+    "url": "https://www.ltfinance.com/blog/business-loan/fixed-assets-vs-current-assets",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:32.306Z",
+    "status": "retrieved",
+    "sha256": "776336670d7992a9ec3addde2446a6c228f2bcd94e286d22d678eda08d5cb452",
+    "file": "776336670d79"
+  },
+  {
+    "url": "https://www.ltfinance.com/blog/business-loan/demand-loan-vs-term-loan",
+    "version": "2026-10-10-v1",
+    "retrievedAt": "2026-10-10T08:26:33.957Z",
+    "status": "retrieved",
+    "sha256": "8279b711b15b9e6ea6b1e2c71aba3553b680f90ea6f0dba020dc54e53f9dec93",
+    "file": "8279b711b15b"
+  }
+]

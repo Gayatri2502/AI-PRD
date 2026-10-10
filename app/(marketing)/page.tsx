@@ -1,36 +1,303 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Check, FileText, GitBranch, Sparkles } from "lucide-react";
-import { pricingPlans } from "@/config/pricing";
-import { appConfig } from "@/config/app";
+import {
+  ArrowUpRight,
+  Mic,
+  FileSpreadsheet,
+  FileText,
+  Check,
+  FolderOpen,
+  Download,
+  MessageSquare,
+} from "lucide-react";
 
-const features = [
-  { icon: Bot, title: "AI clarification flow", body: "Turns vague ideas into structured discovery questions before drafting." },
-  { icon: FileText, title: "Complete PRD generator", body: "Generates requirements, user stories, APIs, schemas, risks, timeline, and rollout plans." },
-  { icon: GitBranch, title: "Diagrams included", body: "Produces Mermaid and architecture guidance alongside the written PRD." }
-];
-
-export default function MarketingPage() {
+export default function Landing() {
   return (
-    <main className="min-h-screen theme-grid bg-background">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <Link href="/" className="text-lg font-semibold">AI PRD</Link>
-        <div className="hidden gap-6 text-sm text-muted-foreground md:flex"><a href="#features">Features</a><a href="#templates">Templates</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div>
-        <Link href="/login" className="rounded-md border px-4 py-2 text-sm">Sign in</Link>
-      </nav>
-      <section className="mx-auto grid max-w-7xl gap-10 px-6 pb-16 pt-16 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
-        <div className="animate-float-up">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm text-muted-foreground"><Sparkles className="h-4 w-4 text-primary" /> Product strategy at AI speed</div>
-          <h1 className="max-w-4xl text-5xl font-semibold tracking-normal md:text-7xl">{appConfig.name}</h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">{appConfig.tagline}</p>
-          <div className="mt-8 flex flex-wrap gap-3"><Link href="/signup" className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground">Start drafting <ArrowRight className="h-4 w-4" /></Link><Link href="/workspace/new" className="inline-flex h-11 items-center rounded-md border px-5 text-sm font-medium">Try workspace</Link></div>
+    <div className="glass-landing">
+      <header className="topbar">
+        <Link className="brand" href="/">
+          Folio<span>Finance</span>
+        </Link>
+        <nav aria-label="Main navigation">
+          <a className="landing-nav-link" href="#reports">
+            Reports
+          </a>
+          <a className="landing-nav-link" href="#how-it-works">
+            How it works
+          </a>
+          <Link href="/login">Sign in</Link>
+          <Link className="primary small" href="/signup">
+            Get started <ArrowUpRight size={16} />
+          </Link>
+        </nav>
+      </header>
+      <main id="main-content" className="landing">
+        <section className="glass-hero" aria-labelledby="hero-title">
+          <div className="hero-copy">
+            <p className="eyebrow">FINANCIAL REPORTS, MADE APPROACHABLE</p>
+            <h1 id="hero-title">
+              Your business.
+              <br />
+              Your plans.
+              <br />
+              <em>Clearly presented.</em>
+            </h1>
+            <p className="intro">
+              Turn your business story and financial records into a Business
+              Project Report or CMA Report. Folio helps you organise the
+              details, review the numbers and prepare documents for your lending
+              conversation.
+            </p>
+            <div className="hero-actions">
+              <Link className="primary" href="/dashboard">
+                Prepare a report <ArrowUpRight size={18} />
+              </Link>
+              <a className="secondary" href="#how-it-works">
+                See how it works
+              </a>
+            </div>
+            <p className="language-note">
+              <Mic size={16} /> Speak or type in English, Hindi or Marathi.
+            </p>
+          </div>
+          <div
+            className="report-window"
+            aria-label="Illustration of the report preparation workflow"
+          >
+            <div className="window-heading">
+              <span className="window-dot" /> YOUR REPORT WORKSPACE{" "}
+              <span className="preview-tag">Illustration</span>
+            </div>
+            <div className="illustration-note">
+              <MessageSquare size={20} />
+              <p>
+                “I want to expand my business.
+                <br />
+                Help me prepare a loan report.”
+              </p>
+            </div>
+            <div className="illustration-document">
+              <div className="document-icon">
+                <FileText size={24} />
+              </div>
+              <p className="eyebrow">BUSINESS PROJECT REPORT</p>
+              <h2>
+                A plan you can
+                <br />
+                put on paper.
+              </h2>
+              <div className="document-lines" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </div>
+              <div className="document-check">
+                <Check size={16} /> Business & promoter profile
+              </div>
+              <div className="document-check">
+                <Check size={16} /> Investment & funding plan
+              </div>
+              <div className="document-check">
+                <Check size={16} /> Financial projections
+              </div>
+              <div className="document-status">
+                Draft · Confirm inputs before generation
+              </div>
+            </div>
+            <div className="export-strip">
+              <span>Take your work with you</span>
+              <strong>PDF</strong>
+              <strong>DOCX</strong>
+              <strong>XLSX</strong>
+            </div>
+          </div>
+        </section>
+        <div className="capability-strip">
+          <span>
+            <Mic size={18} /> Voice or typed replies
+          </span>
+          <span>
+            <FolderOpen size={18} /> Financial document uploads
+          </span>
+          <span>
+            <FileSpreadsheet size={18} /> Traceable calculations
+          </span>
+          <span>
+            <Download size={18} /> Three export formats
+          </span>
         </div>
-        <div className="gradient-border rounded-lg"><div className="glass-panel rounded-lg p-5"><div className="rounded-md border bg-background/70 p-4"><div className="mb-4 flex items-center justify-between"><span className="text-sm font-medium">Generated PRD</span><span className="text-xs text-emerald-400">Auto-saved</span></div>{["Executive Summary", "Functional Requirements", "API Specification", "Risk Analysis", "Sprint Plan"].map((item) => <div key={item} className="mb-3 rounded-md border bg-card p-3 text-sm">{item}</div>)}</div></div></div>
-      </section>
-      <section id="features" className="mx-auto grid max-w-7xl gap-4 px-6 py-12 md:grid-cols-3">{features.map((feature) => <article key={feature.title} className="rounded-lg border bg-card p-6"><feature.icon className="mb-5 h-6 w-6 text-primary" /><h2 className="font-semibold">{feature.title}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">{feature.body}</p></article>)}</section>
-      <section id="templates" className="mx-auto max-w-7xl px-6 py-12"><h2 className="text-3xl font-semibold">Templates</h2><div className="mt-6 grid gap-4 md:grid-cols-3">{["SaaS MVP", "Mobile App", "Internal Platform"].map((template) => <div key={template} className="rounded-lg border bg-card p-5"><h3 className="font-medium">{template}</h3><p className="mt-2 text-sm text-muted-foreground">Structured starter sections, diagrams, and delivery planning.</p></div>)}</div></section>
-      <section id="pricing" className="mx-auto max-w-7xl px-6 py-12"><h2 className="text-3xl font-semibold">Pricing</h2><div className="mt-6 grid gap-4 md:grid-cols-3">{pricingPlans.map((plan) => <article key={plan.id} className="rounded-lg border bg-card p-6"><h3 className="text-xl font-semibold">{plan.name}</h3><p className="mt-3 text-3xl font-bold">${plan.monthly}<span className="text-sm font-normal text-muted-foreground">/mo</span></p><ul className="mt-5 space-y-2 text-sm text-muted-foreground">{plan.features.map((feature) => <li key={feature} className="flex gap-2"><Check className="h-4 w-4 text-emerald-400" />{feature}</li>)}</ul></article>)}</div></section>
-      <section id="faq" className="mx-auto max-w-7xl px-6 py-12"><h2 className="text-3xl font-semibold">FAQ</h2><div className="mt-6 grid gap-4 md:grid-cols-2">{["Can I export PRDs?", "Does it support teams?", "Can I bring my own OpenAI key?", "Is Supabase required?"].map((q) => <div key={q} className="rounded-lg border bg-card p-5"><h3 className="font-medium">{q}</h3><p className="mt-2 text-sm text-muted-foreground">Yes. The app is wired for production integrations and can be configured through environment variables.</p></div>)}</div></section>
-      <footer className="mx-auto flex max-w-7xl justify-between px-6 py-10 text-sm text-muted-foreground"><span>AI PRD</span><span>Build better requirements.</span></footer>
-    </main>
+        <section
+          id="reports"
+          className="landing-section"
+          aria-labelledby="reports-heading"
+        >
+          <p className="eyebrow">TWO REPORTS. ONE WORKSPACE.</p>
+          <h2 id="reports-heading">Choose the report your business needs.</h2>
+          <p className="section-intro">
+            For new ventures, existing businesses and expansion plans. Start
+            with your purpose, then review the details that matter to your
+            lender.
+          </p>
+          <div className="report-pair">
+            <article>
+              <FileText />
+              <span>01 / BUSINESS PLANNING</span>
+              <h3>Business Project Report</h3>
+              <p>
+                Explain what your business does, what you plan to invest and how
+                you expect to repay the borrowing.
+              </p>
+              <ul>
+                <li>Business overview and promoter experience</li>
+                <li>Operations, project cost and means of finance</li>
+                <li>Projections, repayment assessment and risks</li>
+                <li>Assumptions and supporting-document references</li>
+              </ul>
+              <Link className="text-link" href="/dashboard">
+                Prepare a Project Report <ArrowUpRight size={15} />
+              </Link>
+            </article>
+            <article>
+              <FileSpreadsheet />
+              <span>02 / FINANCIAL ASSESSMENT</span>
+              <h3>CMA Report</h3>
+              <p>
+                Organise historical accounts and projections into schedules for
+                a business credit assessment.
+              </p>
+              <ul>
+                <li>Operating statements and balance sheets</li>
+                <li>Working capital, funds flow and cash flow</li>
+                <li>Financial ratios and loan repayment schedules</li>
+                <li>Lender requirements where verified</li>
+              </ul>
+              <Link className="text-link" href="/dashboard">
+                Prepare a CMA Report <ArrowUpRight size={15} />
+              </Link>
+            </article>
+          </div>
+        </section>
+        <section
+          id="how-it-works"
+          className="landing-section"
+          aria-labelledby="how-heading"
+        >
+          <p className="eyebrow">FROM FIRST NOTE TO FINAL REVIEW</p>
+          <h2 id="how-heading">You know your business. Start there.</h2>
+          <div className="how">
+            <div>
+              <span className="step-number">01</span>
+              <Mic />
+              <h3>Tell us about your business</h3>
+              <p>
+                Record a voice note, upload audio or type. Correct your
+                transcript and answer short follow-up questions.
+              </p>
+            </div>
+            <div>
+              <span className="step-number">02</span>
+              <FolderOpen />
+              <h3>Add records. Check the facts.</h3>
+              <p>
+                Upload accounts, bank statements, GST records or quotations.
+                Review extracted figures and confirm your financial assumptions.
+              </p>
+            </div>
+            <div>
+              <span className="step-number">03</span>
+              <Download />
+              <h3>Choose a style and download</h3>
+              <p>
+                Preview your report, then export a PDF, editable Word document
+                and Excel financial schedules with formulas.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section
+          className="information-panel"
+          aria-labelledby="control-heading"
+        >
+          <div>
+            <p className="eyebrow">CLEAR INPUTS. CONSIDERED OUTPUTS.</p>
+            <h2 id="control-heading">Keep control of your numbers.</h2>
+            <p>
+              Folio uses calculation code for financial schedules and AI to help
+              understand your information. Missing figures stay unknown until
+              you supply or confirm them.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <Check size={18} />
+              <span>
+                <strong>Review before generating</strong>Check business details,
+                financial years, units and assumptions.
+              </span>
+            </li>
+            <li>
+              <Check size={18} />
+              <span>
+                <strong>Your preferred presentation</strong>Choose classic
+                banking, modern financial or consulting styles.
+              </span>
+            </li>
+            <li>
+              <Check size={18} />
+              <span>
+                <strong>Permission before AI processing</strong>Audio and
+                private records are sent to configured external providers only
+                after your consent.
+              </span>
+            </li>
+          </ul>
+        </section>
+        <section className="landing-faq" aria-labelledby="faq-heading">
+          <h2 id="faq-heading">Before you begin</h2>
+          <details>
+            <summary>What should I have ready?</summary>
+            <p>
+              Start with your business details, planned investment, own
+              contribution and borrowing requirement. Existing businesses should
+              also have their actual accounts. You can add PDF, image, Word,
+              Excel and CSV records as you work.
+            </p>
+          </details>
+          <details>
+            <summary>Can I use Folio for a new business?</summary>
+            <p>
+              Yes. A new business can prepare clearly labelled projections using
+              assumptions you review and confirm. Folio does not invent
+              historical accounts or market evidence.
+            </p>
+          </details>
+          <details>
+            <summary>Does a report guarantee a loan?</summary>
+            <p>
+              No. Reports are drafts for review, not CA certifications or lender
+              approvals. Each lender makes its own credit decision and may
+              request additional documents or a specific format.
+            </p>
+          </details>
+        </section>
+        <section className="landing-cta">
+          <div>
+            <h2>Give your next business step a clear plan.</h2>
+            <p>Bring your ideas and records together in one workspace.</p>
+          </div>
+          <Link className="primary" href="/dashboard">
+            Open workspace <ArrowUpRight size={18} />
+          </Link>
+        </section>
+        <footer>
+          <span>
+            Folio Finance · Independent business report preparation platform.
+          </span>
+          <span>
+            Reports require review. No CA certification or loan sanction
+            guarantee.
+          </span>
+        </footer>
+      </main>
+    </div>
   );
 }

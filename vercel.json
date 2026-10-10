@@ -1,0 +1,1 @@
+{"framework":"nextjs","functions":{"app/api/jobs/run/route.ts":{"maxDuration":300}}}

@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{userId}/{businessId}/{uploadId}/{filename} {
+      function registered() {
+        let upload = firestore.get(/databases/(default)/documents/uploads/$(uploadId)).data;
+        return upload.user_id == userId && upload.business_id == businessId
+          && upload.status == 'pending-upload'
+          && upload.path == userId + '/' + businessId + '/' + uploadId + '/' + filename
+          && upload.size == request.resource.size
+          && upload.mime == request.resource.contentType;
+      }
+      allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.size > 0 && request.resource.size <= 25 * 1024 * 1024 && registered();
+      allow read, update, delete: if false;
+    }
+    // Downloads use owner-checked, short-lived server-signed URLs.
+    match /{path=**} { allow read, write: if false; }
+  }
+}

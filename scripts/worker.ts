@@ -1,0 +1,2 @@
+import {runOne} from '../lib/finance/jobs';
+let stopping=false;process.on('SIGINT',()=>{stopping=true;});process.on('SIGTERM',()=>{stopping=true;});console.log('Folio worker running; private payloads are not logged.');while(!stopping){try{const worked=await runOne();if(!worked)await new Promise(r=>setTimeout(r,2000));}catch{console.error('Worker cannot reach configured database; retrying in 10 seconds.');await new Promise(r=>setTimeout(r,10000));}}

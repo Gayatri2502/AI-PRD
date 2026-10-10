@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // The Node server verifies session cookies and ownership on every request.
+    // Client data operations are denied, including embeddings and processing jobs.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

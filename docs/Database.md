@@ -1,15 +1,9 @@
+> Backend update: Firebase Authentication, Firestore and Cloud Storage replace the earlier Supabase design. See [current deployment details](Deployment.md). SQL/RLS notes below describe the retired design, not the active backend.
+
 # Database
 
-The Prisma schema lives in `database/schema.prisma` and maps the SaaS domain:
+Use the migration in `supabase/migrations`. Private tables: businesses, conversations, uploads, extracted_figures, assumptions, report_versions, jobs and private_embeddings. Public reference knowledge: reference_versions and reference_chunks. Embeddings use pgvector with 1536 dimensions.
 
-- Users and Supabase identity mapping
-- Projects and PRDs
-- Messages and AI usage
-- Templates and exports
-- Credits
-- Teams and members
-- Billing records
-- Activity logs
-- Version history
+Each private table has RLS and owner-scoped SELECT policies. Writes require authenticated server routes using the service role after explicit ownership checks. Composite owner/business foreign keys reject cross-owner relationships. Job enqueueing uses a per-owner advisory lock for atomic quotas. Workers claim jobs using SKIP LOCKED leases.
 
-Use `npm run db:migrate` for local migration development and `npm run db:push` for quick schema syncs.
+The DATABASE_URL is server-side only. No password is supplied in source. A dedicated test-project integration script checks owner reads, cross-user/anonymous denial and privileged-job access denial. Run it after migrating the actual project.
