@@ -16,8 +16,8 @@
 ## Pending before public launch
 
 - Private Storage provisioning/configuration and deployment of its rules. Firebase CLI is authenticated, but the project has billing disabled and no buckets. User approval of a billing plan is pending. File upload/download round trips are not yet validated.
-- Vercel CLI 63.1.2 is authenticated and linked to `folio-finance` with GitHub integration. A preview build was submitted; hosted status is checked separately.
-- Real STT/LLM/OCR/embedding provider configuration and live English/Hindi/Marathi recordings. Existing adapter tests use a mock HTTP provider.
+- Vercel CLI 63.1.2 is authenticated and linked to `folio-finance` with GitHub integration. The initial preview reached Ready. Firebase AI Logic was then enabled and a live structured discovery test succeeded using fictional business data; the updated preview is deployed separately.
+- Live multilingual audio/OCR checks and embedding provider setup. Firebase AI Logic conversation has passed a live structured-output check; remaining automated provider tests use mock HTTP responses.
 - Public reference embedding ingestion, scheduled recovery of interrupted jobs, operational monitoring, backups, retention/deletion and billing controls.
 - Final visual QA of all regenerated document pages and spreadsheet recalculation. Earlier samples caught and corrected repayment pagination and historical DSCR formula issues; do not treat sample binary generation as complete layout certification.
 

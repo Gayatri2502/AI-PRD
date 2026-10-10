@@ -31,6 +31,9 @@ Missing provider credentials produce configuration errors. Firebase database/aut
 
 ## Provider configuration
 
+Set `FIREBASE_AI_MODEL` to use the enabled Firebase AI Logic Gemini backend for conversation, extraction assistance, transcription and OCR. A live structured discovery check passed with `gemini-3.5-flash-lite`. This does not configure embeddings. App Check/abuse protection and provider retention must be reviewed before public release.
+
+
 Speech, chat, embeddings and OCR are replaceable OpenAI-compatible HTTP adapters. Set each `*_BASE_URL`, `*_API_KEY` and `*_MODEL`. Base URLs include the API version, for example `https://provider.example/v1`. STT uses `/audio/transcriptions`, chat/vision OCR use `/chat/completions`, and embeddings use `/embeddings`. The selected embedding model must return 1536 dimensions; changing dimensions requires reindexing. Provider capacity, pricing, retention and language support must be reviewed for the selected account.
 
 No private audio/documents are sent to providers until the user permits external processing. Printed instructions inside documents and websites are treated as data. A separate review step is required for extracted financial values and final assumptions.
