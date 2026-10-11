@@ -21,7 +21,8 @@ export default function Auth({
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [created, setCreated] = useState(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -33,12 +34,12 @@ export default function Auth({
         await establishSession();
         location.assign("/dashboard");
       } else if (mode === "signup") {
-        const result = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password,
-        );
-        await sendEmailVerification(result.user);
+        const result =
+          created && auth.currentUser?.email === email
+            ? { user: auth.currentUser }
+            : await createUserWithEmailAndPassword(auth, email, password);
+        setCreated(true);
+        await sendEmailVerification(result.user).catch(() => {});
         await establishSession();
         location.assign("/dashboard");
       } else if (mode === "forgot") {
@@ -52,6 +53,19 @@ export default function Auth({
         location.assign("/login");
       }
     } catch (e) {
+      const code = (e as { code?: string })?.code;
+      if (code === "auth/email-already-in-use") {
+        setMessage(
+          "An account already exists for this email. Choose Back to sign in below, or reset your password.",
+        );
+        return;
+      }
+      if (code === "auth/invalid-credential") {
+        setMessage(
+          "Email or password is incorrect. Try again or reset your password.",
+        );
+        return;
+      }
       setMessage(
         mode === "forgot"
           ? "If an account exists, a recovery email is on its way."
@@ -103,7 +117,7 @@ export default function Auth({
             Password
             <input
               type="password"
-              minLength={12}
+              minLength={mode === "login" ? 1 : 12}
               autoComplete={
                 mode === "login" ? "current-password" : "new-password"
               }
@@ -124,7 +138,9 @@ export default function Auth({
             : mode === "login"
               ? "Sign in"
               : mode === "signup"
-                ? "Create account"
+                ? created
+                  ? "Continue to workspace"
+                  : "Create account"
                 : mode === "forgot"
                   ? "Send recovery email"
                   : "Update password"}

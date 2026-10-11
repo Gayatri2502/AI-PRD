@@ -1,5 +1,6 @@
 "use client";
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { readJSON } from "@/lib/http";
 import { getAuth } from "firebase/auth";
 export const configured = () =>
   Boolean(
@@ -28,8 +29,7 @@ export async function establishSession() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken: await user.getIdToken() }),
   });
-  if (!response.ok)
-    throw Error("Unable to create secure session. Please sign in again.");
+  await readJSON(response);
 }
 export async function uploadPrivateFile(path: string, file: File) {
   const { getStorage, ref, uploadBytes } = await import("firebase/storage");

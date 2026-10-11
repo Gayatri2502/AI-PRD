@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { readJSON } from "@/lib/http";
 import {
   Mic,
   Square,
@@ -37,6 +38,13 @@ export default function Dashboard() {
     [figures, setFigures] = useState<Row[]>([]),
     [jobs, setJobs] = useState<Row[]>([]),
     [reports, setReports] = useState<Row[]>([]),
+    [usage, setUsage] = useState<{
+      total: number;
+      input: number;
+      output: number;
+      jobs: number;
+      limit: number;
+    } | null>(null),
     [text, setText] = useState(""),
     [language, setLanguage] = useState("English"),
     [consent, setConsent] = useState(false),
@@ -68,7 +76,7 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const j = await r.json();
+    const j = await readJSON(r);
     if (!r.ok) throw Error(j.error || "Request failed");
     return j;
   }
@@ -77,8 +85,9 @@ export default function Dashboard() {
     loading.current = true;
     try {
       const r = await fetch("/api/workspace", { cache: "no-store" });
-      const j = await r.json();
+      const j = await readJSON(r);
       if (!r.ok) throw Error(j.error);
+      setUsage(j.usage);
       let b = j.business;
       if (!b && initial) b = await api({ action: "create" });
       if (b) {
@@ -211,6 +220,8 @@ export default function Dashboard() {
       return;
     }
     await action(async () => {
+      if (!businessRef.current)
+        throw Error("Your workspace is not ready. Please sign in and retry.");
       if (!consent)
         throw Error(
           "Enable external processing before recording for transcription.",
@@ -238,7 +249,24 @@ export default function Dashboard() {
           ),
           { type },
         );
-        void uploadFiles([file], "audio");
+        void action(async () => {
+          if (file.size > 4_000_000)
+            throw Error(
+              "Voice note is too large. Record a shorter note (maximum 4 MB).",
+            );
+          const form = new FormData();
+          form.set("audio", file);
+          form.set("consent", "true");
+          setNotice("Transcribing your voice note…");
+          const result = await readJSON(
+            await fetch("/api/voice", { method: "POST", body: form }),
+          );
+          setText(result.transcript);
+          setNotice(
+            "Transcript ready. Review it, then send it to the assistant.",
+          );
+          await load();
+        });
       };
       r.start();
       setRecording(true);
@@ -339,6 +367,26 @@ export default function Dashboard() {
           </div>
           <span className="draft-pill">Drafts for review</span>
         </div>
+        {usage && (
+          <aside className="usage-strip" aria-label="Your daily AI usage">
+            <div>
+              <strong>{usage.total.toLocaleString()}</strong>
+              <span>AI tokens used today</span>
+            </div>
+            <div>
+              <strong>
+                {usage.jobs} / {usage.limit}
+              </strong>
+              <span>Free daily processing requests</span>
+            </div>
+            <p>
+              Input: {usage.input.toLocaleString()} · Output:{" "}
+              {usage.output.toLocaleString()}. Provider-reported tokens from
+              tracked requests; totals may include reasoning tokens. Allowance
+              resets at 00:00 UTC. Provider quotas also apply.
+            </p>
+          </aside>
+        )}
         {notice && (
           <div className="notice" role="status">
             {notice}

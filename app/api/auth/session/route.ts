@@ -1,3 +1,4 @@
+import { sameOrigin } from "@/lib/origin";
 import { NextRequest, NextResponse } from "next/server";
 import { authAdmin } from "@/lib/firebase/admin";
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ const cookie = {
 };
 export async function POST(req: NextRequest) {
   try {
-    if (req.headers.get("origin") !== req.nextUrl.origin)
+    if (!sameOrigin(req))
       return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
     const { idToken } = await req.json();
     if (typeof idToken !== "string" || idToken.length > 10000)
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 }
 export async function DELETE(req: NextRequest) {
-  if (req.headers.get("origin") !== req.nextUrl.origin)
+  if (!sameOrigin(req))
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   const res = NextResponse.json({ ok: true });
   res.cookies.set("__session", "", { ...cookie, maxAge: 0 });

@@ -1,3 +1,5 @@
+import { sameOrigin } from "@/lib/origin";
+import { usageFor } from "@/lib/firebase/usage";
 import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
@@ -47,9 +49,14 @@ export async function GET() {
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
     );
+    const usage = await usageFor(user.id);
     const business = businesses?.[0] || null;
     if (!business)
-      return NextResponse.json({ business: null, user: { email: user.email } });
+      return NextResponse.json({
+        usage,
+        business: null,
+        user: { email: user.email },
+      });
     const results = await Promise.all(
       [
         "conversations",
@@ -70,6 +77,7 @@ export async function GET() {
     return NextResponse.json(
       {
         business,
+        usage,
         user: { email: user.email },
         ...Object.fromEntries(
           ["conversations", "uploads", "figures", "reports", "jobs"].map(
@@ -85,10 +93,7 @@ export async function GET() {
 }
 export async function POST(req: NextRequest) {
   try {
-    if (
-      req.headers.get("origin") &&
-      req.headers.get("origin") !== req.nextUrl.origin
-    )
+    if (req.headers.get("origin") && !sameOrigin(req))
       throw Error("INPUT: Invalid origin.");
     if (Number(req.headers.get("content-length") || 0) > 1000000)
       throw Error("INPUT: Request too large.");
@@ -178,19 +183,17 @@ export async function POST(req: NextRequest) {
       const uploadId = randomUUID(),
         path = `${user.id}/${businessId}/${uploadId}/${name}`;
       checked(
-        await db
-          .from("uploads")
-          .insert({
-            id: uploadId,
-            user_id: user.id,
-            business_id: businessId,
-            name,
-            path,
-            mime,
-            size,
-            kind,
-            status: "pending-upload",
-          }),
+        await db.from("uploads").insert({
+          id: uploadId,
+          user_id: user.id,
+          business_id: businessId,
+          name,
+          path,
+          mime,
+          size,
+          kind,
+          status: "pending-upload",
+        }),
       );
       return NextResponse.json({ uploadId, path });
     }
@@ -304,14 +307,12 @@ export async function POST(req: NextRequest) {
       if (unreviewed?.length)
         throw Error("INPUT: Review extracted figures before generating.");
       checked(
-        await db
-          .from("assumptions")
-          .insert({
-            user_id: user.id,
-            business_id: businessId,
-            data: data.assumptions,
-            confirmed_at: new Date().toISOString(),
-          }),
+        await db.from("assumptions").insert({
+          user_id: user.id,
+          business_id: businessId,
+          data: data.assumptions,
+          confirmed_at: new Date().toISOString(),
+        }),
       );
       return enqueue("report", { input: data, consent: Boolean(body.consent) });
     }

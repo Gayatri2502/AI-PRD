@@ -22,3 +22,17 @@
 - Final visual QA of all regenerated document pages and spreadsheet recalculation. Earlier samples caught and corrected repayment pagination and historical DSCR formula issues; do not treat sample binary generation as complete layout certification.
 
 This is an implemented application undergoing integration validation, not a certified production financial service. Financial drafts require human review; no CA certification or loan sanction is implied.
+
+## Authentication, voice and AI usage update — 11 October 2026
+
+- Fixed a deployed Firebase Admin import failure: `jwks-rsa` loaded an ESM-only `jose` using CommonJS. Pin its nested dependency to compatible `jose` 5 and run deployment on Node 22.
+- Same-origin validation compares the request's public Host with Origin, rather than Next's internal bind URL. Cross-origin and missing-origin session requests remain rejected.
+- Auth forms explain duplicate accounts, allow existing passwords on sign-in, and retain the created-account state if secure-session establishment needs a retry.
+- API consumers reject HTML gateway responses with a readable service error instead of attempting JSON parsing.
+- Firebase AI response metadata feeds private per-user, per-UTC-day token counters. The dashboard distinguishes measured tokens from the application's 100 daily processing requests. This is not the provider's project-wide remaining quota. Counts start with this release; prior usage cannot be reconstructed. Failed requests without returned usage metadata cannot be counted.
+- Recorded voice is transcribed through an authenticated, consent-gated endpoint, maximum 4 MB, sharing the daily request allowance. Audio is held in request memory, sent to the configured provider, and not saved to Firebase Storage. The editable transcript is returned for review. The endpoint is synchronous and retryable; long audio/file-upload jobs still require Storage.
+- Landing page includes an original SVG illustration, an accessible four-step interactive diagram, reduced-motion styles, and a real AI example using a fixed fictional business. Live examples require sign-in and count against the daily request allowance.
+- Local production-server checks with real Firebase: session HTTP 200, authenticated workspace HTTP 200, unauthenticated workspace JSON HTTP 401, AI output and positive provider token accounting. Temporary accounts and usage records are removed afterwards.
+- Voice endpoint successfully transcribed Google's public Brooklyn Bridge WAV reference. Source: https://docs.cloud.google.com/speech-to-text/docs/v1/sync-recognize. A failed local text-to-speech fixture was found to contain no audio; empty recordings and no-speech responses now receive explicit handling.
+- Deployment verification is separate from these local checks; use `SMOKE_ORIGIN=https://your-domain SMOKE_AI=1 node --env-file=.env.local --import tsx scripts/check-deployed-auth.ts` after deployment. Optional `SMOKE_AUDIO` points to a WAV fixture; `SMOKE_AUDIO_EXPECT` supplies the expected phrase (default Brooklyn Bridge).
+- Remaining: private file storage requires bucket provisioning/billing; provider App Check and broader multilingual speech accuracy evaluation are still required before unrestricted public rollout.

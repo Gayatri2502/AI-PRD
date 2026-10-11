@@ -1,3 +1,4 @@
+import HowItWorks from "@/components/finance/HowItWorks";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -176,43 +177,7 @@ export default function Landing() {
             </article>
           </div>
         </section>
-        <section
-          id="how-it-works"
-          className="landing-section"
-          aria-labelledby="how-heading"
-        >
-          <p className="eyebrow">FROM FIRST NOTE TO FINAL REVIEW</p>
-          <h2 id="how-heading">You know your business. Start there.</h2>
-          <div className="how">
-            <div>
-              <span className="step-number">01</span>
-              <Mic />
-              <h3>Tell us about your business</h3>
-              <p>
-                Record a voice note, upload audio or type. Correct your
-                transcript and answer short follow-up questions.
-              </p>
-            </div>
-            <div>
-              <span className="step-number">02</span>
-              <FolderOpen />
-              <h3>Add records. Check the facts.</h3>
-              <p>
-                Upload accounts, bank statements, GST records or quotations.
-                Review extracted figures and confirm your financial assumptions.
-              </p>
-            </div>
-            <div>
-              <span className="step-number">03</span>
-              <Download />
-              <h3>Choose a style and download</h3>
-              <p>
-                Preview your report, then export a PDF, editable Word document
-                and Excel financial schedules with formulas.
-              </p>
-            </div>
-          </div>
-        </section>
+        <HowItWorks />
         <section
           className="information-panel"
           aria-labelledby="control-heading"
