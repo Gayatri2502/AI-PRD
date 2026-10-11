@@ -25,7 +25,7 @@ This is an implemented application undergoing integration validation, not a cert
 
 ## Authentication, voice and AI usage update — 11 October 2026
 
-- Fixed a deployed Firebase Admin import failure: `jwks-rsa` loaded an ESM-only `jose` using CommonJS. Pin its nested dependency to compatible `jose` 5 and run deployment on Node 22.
+- Fixed a deployed Firebase Admin import failure: `jwks-rsa` loaded an ESM-only `jose` using CommonJS. Pin its nested dependency to compatible `jose` 5 and run deployment on Node 24 (required by Firebase SDK 13).
 - Same-origin validation compares the request's public Host with Origin, rather than Next's internal bind URL. Cross-origin and missing-origin session requests remain rejected.
 - Auth forms explain duplicate accounts, allow existing passwords on sign-in, and retain the created-account state if secure-session establishment needs a retry.
 - API consumers reject HTML gateway responses with a readable service error instead of attempting JSON parsing.
