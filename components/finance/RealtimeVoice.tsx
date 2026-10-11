@@ -40,10 +40,11 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       const pc = new RTCPeerConnection(); connection.current = pc;
       media.getTracks().forEach(t => pc.addTrack(t, media));
       pc.ontrack = e => { if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setError("Tap Play on the audio control to hear Folio.")); } };
-      pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && active.current) { setError("Voice disconnected. Tap Folio to reconnect."); stop(); } };
+      pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && active.current && run === generation.current) { setError("Voice disconnected. Tap Folio to reconnect."); stop(); } };
       const channel = pc.createDataChannel("oai-events");
-      channel.onclose = () => { if (active.current) { setError("Voice connection ended. Tap Folio to reconnect."); stop(); } };
+      channel.onclose = () => { if (active.current && run === generation.current) { setError("Voice connection ended. Tap Folio to reconnect."); stop(); } };
       channel.onopen = () => {
+        if (!active.current || run !== generation.current) return;
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => { setError("Voice session ended after four minutes. Tap to continue."); stop(); }, 235000);
         setPhase("greeting");
@@ -51,7 +52,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       };
       const handledCalls = new Set<string>();
       channel.onmessage = async e => {
-        if (!active.current) return;
+        if (!active.current || run !== generation.current) return;
         let event; try { event = JSON.parse(e.data); } catch { return; }
         if (event.type === "input_audio_buffer.speech_started") setPhase("listening");
         if (event.type === "input_audio_buffer.speech_stopped") setPhase("thinking");
@@ -100,7 +101,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       <FolioCharacter listening={phase === "listening"} speaking={phase === "speaking"} thinking={["permission", "connecting", "greeting", "thinking"].includes(phase)} paused={phase === "idle" && hasStarted} />
       <span className="folio-tap-label">{phase === "idle" ? "Tap to talk" : "Tap to end"}</span>
     </button>
-    <div className="folio-feedback" role="status" aria-live="polite"><span className="folio-phase-dot" aria-hidden="true" /><strong>{{ idle: hasStarted ? "Stopped · Microphone off" : "Tap Folio · I’ll introduce myself first", permission: "Waiting for microphone permission…", connecting: "Connecting your conversation…", greeting: "Folio is getting ready to greet you…", listening: "Listening · Tell me about your business", thinking: "Got it · Preparing your answer…", speaking: "Folio is speaking" }[phase]}</strong></div>
+    <div className="folio-feedback" role="status" aria-live="polite"><span className="folio-phase-dot" aria-hidden="true" /><strong>{{ idle: error ? "Voice could not connect · Microphone off" : hasStarted ? "Stopped · Microphone off" : "Tap Folio · I’ll introduce myself first", permission: "Waiting for microphone permission…", connecting: "Connecting your conversation…", greeting: "Folio is getting ready to greet you…", listening: "Listening · Tell me about your business", thinking: "Got it · Preparing your answer…", speaking: "Folio is speaking" }[phase]}</strong></div>
     {reply && <p>{reply}</p>}
     {error && <p role="alert">{error}</p>}
     <select aria-label="Voice language" disabled={phase !== "idle"} value={selectedLanguage} onChange={e => setSelectedLanguage(e.target.value)}>{["English", "Hindi", "Marathi", "Mixed"].map(x => <option key={x}>{x}</option>)}</select>

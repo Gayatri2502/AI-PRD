@@ -52,6 +52,15 @@ try {
     assert.equal(invalid.status, 400);
     console.log("Realtime key configuration and consent validation: OK");
   }
+  if (process.env.SMOKE_VOICE_CONFIG === "1") {
+    const created = await fetch(`${origin}/api/workspace`, { method: "POST", headers: { Origin: origin, Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ action: "create" }) });
+    const business = await created.json();
+    assert.ok(business.id);
+    const probe = await fetch(`${origin}/api/voice/realtime`, { method: "POST", headers: { Origin: origin, Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ businessId: business.id, consent: true, language: "English", check: true }) });
+    const result = await probe.json();
+    console.log("OpenAI voice configuration:", probe.status, JSON.stringify(result));
+    assert.equal(probe.status, 200);
+  }
   if (process.env.SMOKE_AI === "1") {
     const demo = await fetch(`${origin}/api/demo`, {
       method: "POST",
