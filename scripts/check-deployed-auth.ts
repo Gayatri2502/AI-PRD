@@ -86,9 +86,56 @@ try {
     );
     console.log("Voice transcription: OK");
   }
+  if (process.env.SMOKE_CONVERSATION === "1") {
+    const post = async (body: unknown) => {
+      const r = await fetch(`${origin}/api/workspace`, {
+        method: "POST",
+        headers: {
+          Origin: origin,
+          Cookie: cookie,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      assert.ok(r.ok, JSON.stringify(j));
+      return j;
+    };
+    const business = await post({ action: "create" });
+    await post({
+      action: "conversation",
+      businessId: business.id,
+      transcript:
+        "My business is Sample Services in Pune. We provide bookkeeping and want to expand our team.",
+      language: "English",
+      consent: true,
+    });
+    let succeeded = false;
+    for (let i = 0; i < 30; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const current = await (
+        await fetch(`${origin}/api/workspace`, { headers: { Cookie: cookie } })
+      ).json();
+      const job = current.jobs?.find((j: any) => j.kind === "conversation");
+      if (job?.status === "failed") throw Error(job.error);
+      if (job?.status === "succeeded") {
+        assert.ok(job.result.reply);
+        console.log("Background AI conversation: OK", job.result.reply);
+        succeeded = true;
+        break;
+      }
+    }
+    assert.ok(succeeded, "Conversation job timed out");
+  }
 } finally {
   await auth.deleteUser(uid);
-  for (const collection of ["ai_usage", "processing_quotas"]) {
+  for (const collection of [
+    "ai_usage",
+    "processing_quotas",
+    "jobs",
+    "conversations",
+    "businesses",
+  ]) {
     const docs = await firestore()
       .collection(collection)
       .where("user_id", "==", uid)

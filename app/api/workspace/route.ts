@@ -254,7 +254,17 @@ export async function POST(req: NextRequest) {
           .eq("reviewed", true)
           .limit(100),
       );
+      const history = checked(
+        await db
+          .from("conversations")
+          .select("role,content")
+          .eq("user_id", user.id)
+          .eq("business_id", businessId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+      );
       return enqueue("conversation", {
+        history: [...(history || [])].reverse(),
         records,
         transcript,
         language: z

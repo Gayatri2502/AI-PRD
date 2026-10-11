@@ -51,6 +51,9 @@ export default function Dashboard() {
     [consent, setConsent] = useState(false),
     [muted, setMuted] = useState(true),
     [recording, setRecording] = useState(false),
+    [autoSendVoice, setAutoSendVoice] = useState(true),
+    [callActive, setCallActive] = useState(false),
+    [workspaceLoading, setWorkspaceLoading] = useState(true),
     [speaking, setSpeaking] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -64,6 +67,25 @@ export default function Dashboard() {
     dirty = useRef(false),
     handled = useRef(new Set<string>()),
     businessRef = useRef<Row | null>(null);
+  const callRef = useRef(false),
+    discardAudio = useRef(false),
+    audioCleanup = useRef<(() => void) | null>(null),
+    nextListen = useRef<() => void>(() => {});
+  nextListen.current = () => {
+    if (callRef.current) void record();
+  };
+  function endConversation() {
+    callRef.current = false;
+    setCallActive(false);
+    discardAudio.current = true;
+    audioCleanup.current?.();
+    if (recorder.current?.state === "recording") recorder.current.stop();
+    stream.current?.getTracks().forEach((t) => t.stop());
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    setSpeaking(false);
+    setRecording(false);
+    setMuted(true);
+  }
   const loading = useRef(false);
   const saveInFlight = useRef(false),
     latestData = useRef(data);
@@ -91,9 +113,9 @@ export default function Dashboard() {
       if (!r.ok) throw Error(j.error);
       setUsage(j.usage);
       let b = j.business;
-      if (!b && initial) b = await api({ action: "create" });
+      if (!b && !businessRef.current) b = await api({ action: "create" });
       if (b) {
-        if (initial) {
+        if (initial || !businessRef.current) {
           setData({ ...initialInput, ...b.data });
           setBusiness(b);
           businessRef.current = b;
@@ -103,7 +125,16 @@ export default function Dashboard() {
         setFigures(j.figures || []);
         setReports(j.reports || []);
         setJobs(j.jobs || []);
-        for (const job of j.jobs || []) {
+        for (const job of [...(j.jobs || [])].sort((a, b) =>
+          String(a.created_at).localeCompare(String(b.created_at)),
+        )) {
+          if (job.status === "failed" && !handled.current.has(job.id)) {
+            handled.current.add(job.id);
+            if (callRef.current && job.kind === "conversation") {
+              endConversation();
+              setNotice("Folio could not finish this reply. Please retry your message.");
+            }
+          }
           if (job.status === "succeeded" && !handled.current.has(job.id)) {
             handled.current.add(job.id);
             if (job.kind === "conversation") setConversationResult(job.result);
@@ -115,6 +146,7 @@ export default function Dashboard() {
       setNotice(e instanceof Error ? e.message : "Unable to load workspace");
     } finally {
       loading.current = false;
+      setWorkspaceLoading(false);
     }
   }
   useEffect(() => {
@@ -122,8 +154,11 @@ export default function Dashboard() {
     const timer = setInterval(() => void load(), 4000);
     return () => {
       clearInterval(timer);
+      callRef.current = false;
+      discardAudio.current = true;
+      audioCleanup.current?.();
       stream.current?.getTracks().forEach((t) => t.stop());
-      speechSynthesis?.cancel();
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
     };
   }, []);
   useEffect(() => {
@@ -164,32 +199,67 @@ export default function Dashboard() {
     try {
       await fn();
     } catch (e) {
+      if (callRef.current) endConversation();
       setNotice(e instanceof Error ? e.message : "Please try again.");
     } finally {
       setBusy(false);
     }
   }
-  async function send() {
-    await action(async () => {
-      if (!business)
-        throw Error("Sign in to a configured Firebase workspace first.");
-      if (dirty.current) await save();
-      await api({
-        action: "conversation",
-        businessId: business.id,
-        transcript: text,
-        language,
-        consent,
-      });
-      setText("");
-      await load();
+  async function queueReply(transcript: string) {
+    const workspace = businessRef.current;
+    if (!workspace) throw Error("Sign in below to start talking with Folio.");
+    if (!consent)
+      throw Error("Allow AI processing below before sending your reply.");
+    if (dirty.current) await save();
+    await api({
+      action: "conversation",
+      businessId: workspace.id,
+      transcript,
+      language,
+      consent,
     });
+    setText("");
+    setNotice("Folio is thinking. Your answer will appear below shortly.");
+    await load();
+  }
+  async function send() {
+    await action(() => queueReply(text.trim()));
+  }
+  async function transcribeVoice(file: File) {
+    if (!businessRef.current)
+      throw Error("Sign in below to start talking with Folio.");
+    if (!consent)
+      throw Error("Allow AI processing below before sending audio.");
+    if (file.size > 4_000_000)
+      throw Error(
+        "Voice note is too large. Record a shorter note (maximum 4 MB).",
+      );
+    const form = new FormData();
+    form.set("audio", file);
+    form.set("consent", "true");
+    setNotice("Listening complete. Converting your voice to text…");
+    const result = await readJSON(
+      await fetch("/api/voice", { method: "POST", body: form }),
+    );
+    setText(result.transcript);
+    if (callRef.current || autoSendVoice) {
+      await queueReply(result.transcript);
+    } else
+      setNotice(
+        "Transcript ready below. Review it and click Send to get Folio’s answer.",
+      );
+    await load();
   }
   async function uploadFiles(
     files: FileList | File[] | null,
     kind = "financial",
   ) {
     if (!files) return;
+    if (kind === "audio") {
+      for (const file of Array.from(files))
+        await action(() => transcribeVoice(file));
+      return;
+    }
     await action(async () => {
       if (!business) throw Error("Sign in to upload private files.");
       if (Array.from(files).length > 20)
@@ -232,16 +302,46 @@ export default function Dashboard() {
         throw Error(
           "Recording is not supported here. Upload a voice note instead.",
         );
-      stream.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      const startedAsCall = callRef.current;
+      try {
+        stream.current = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+      } catch (error) {
+        const name = (error as DOMException).name;
+        throw Error(
+          name === "NotAllowedError"
+            ? "Microphone access is blocked. Open your browser’s site permissions, allow Microphone for this website, then retry. You can also type below."
+            : name === "NotFoundError"
+              ? "No microphone was found. Connect one or type your reply below."
+              : "The microphone could not start. Close other apps using it, then retry or type below.",
+        );
+      }
+      if (startedAsCall && !callRef.current) {
+        stream.current?.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      discardAudio.current = false;
       chunks.current = [];
-      const r = new MediaRecorder(stream.current);
+      const mimeType = [
+        "audio/webm;codecs=opus",
+        "audio/mp4",
+        "audio/webm",
+      ].find((type) => MediaRecorder.isTypeSupported(type));
+      const r = new MediaRecorder(stream.current, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 64000,
+      });
       recorder.current = r;
       r.ondataavailable = (e) => {
         if (e.data.size) chunks.current.push(e.data);
       };
       r.onstop = () => {
+        audioCleanup.current?.();
+        if (discardAudio.current) {
+          stream.current?.getTracks().forEach((t) => t.stop());
+          return;
+        }
         stream.current?.getTracks().forEach((t) => t.stop());
         const type = r.mimeType;
         const file = new File(
@@ -251,27 +351,60 @@ export default function Dashboard() {
           ),
           { type },
         );
-        void action(async () => {
-          if (file.size > 4_000_000)
-            throw Error(
-              "Voice note is too large. Record a shorter note (maximum 4 MB).",
-            );
-          const form = new FormData();
-          form.set("audio", file);
-          form.set("consent", "true");
-          setNotice("Transcribing your voice note…");
-          const result = await readJSON(
-            await fetch("/api/voice", { method: "POST", body: form }),
-          );
-          setText(result.transcript);
-          setNotice(
-            "Transcript ready. Review it, then send it to the assistant.",
-          );
-          await load();
-        });
+        setRecording(false);
+        void action(() => transcribeVoice(file));
       };
+      setMuted(false);
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+      setSpeaking(false);
       r.start();
+      if (callRef.current) {
+        const context = new AudioContext();
+        await context.resume();
+        const source = context.createMediaStreamSource(stream.current!);
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        let heard = false,
+          lastSound = Date.now();
+        const started = Date.now();
+        const interval = setInterval(() => {
+          analyser.getFloatTimeDomainData(samples);
+          const rms = Math.sqrt(
+            samples.reduce((sum, x) => sum + x * x, 0) / samples.length,
+          );
+          if (rms > 0.018) {
+            heard = true;
+            lastSound = Date.now();
+          }
+          if (
+            heard &&
+            Date.now() - lastSound > 1700 &&
+            Date.now() - started > 1500 &&
+            r.state === "recording"
+          )
+            r.stop();
+          if (!heard && Date.now() - started > 20000) {
+            endConversation();
+            setNotice(
+              "I didn’t hear speech. Check your microphone and activate Folio again, or type below.",
+            );
+          }
+        }, 100);
+        audioCleanup.current = () => {
+          clearInterval(interval);
+          source.disconnect();
+          void context.close().catch(() => {});
+          audioCleanup.current = null;
+        };
+      }
       setRecording(true);
+      setNotice(
+        callRef.current
+          ? "I’m listening. Pause when you finish; Folio will reply and listen again."
+          : "Microphone is on. Speak now, then click Finish speaking to hear Folio’s reply.",
+      );
       setTimeout(() => {
         if (r.state === "recording") {
           r.stop();
@@ -282,6 +415,7 @@ export default function Dashboard() {
   }
   function speak(force = false) {
     if (!("speechSynthesis" in window)) {
+      if (callRef.current) endConversation();
       setNotice(
         "Spoken replies are not supported in this browser. You can read Folio’s replies below.",
       );
@@ -308,9 +442,17 @@ export default function Dashboard() {
       if (voice) utterance.voice = voice;
       utterance.rate = 0.94;
       utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
+      utterance.onend = () => {
+        setSpeaking(false);
+        if (callRef.current) setTimeout(() => nextListen.current(), 350);
+      };
       utterance.onerror = (event) => {
         setSpeaking(false);
+        if (
+          callRef.current &&
+          !["canceled", "interrupted"].includes(event.error)
+        )
+          endConversation();
         if (!["canceled", "interrupted"].includes(event.error))
           setNotice(
             "Your browser could not play this voice. Folio’s reply is available as text below.",
@@ -328,7 +470,13 @@ export default function Dashboard() {
     return () => {
       if ("speechSynthesis" in window) speechSynthesis.cancel();
     };
-  }, [conversationResult, muted, recording, language]);
+  }, [conversationResult, muted, language]);
+  useEffect(() => {
+    if (recording && "speechSynthesis" in window) {
+      speechSynthesis.cancel();
+      setSpeaking(false);
+    }
+  }, [recording]);
   function confirm() {
     const parsed = calculate({ ...data, confirmed: true });
     if (parsed.issues.length) throw Error(parsed.issues.join("\n"));
@@ -443,6 +591,41 @@ export default function Dashboard() {
                 {muted ? <VolumeX /> : <Volume2 />}
               </button>
             </div>
+            {!business && (
+              <div className="notice" role="status">
+                {workspaceLoading ? (
+                  "Connecting to your private workspace…"
+                ) : (
+                  <>
+                    <strong>Sign in to talk with Folio.</strong>
+                    <p>Your AI conversation needs an active account.</p>
+                    <Link className="primary small" href="/login">
+                      Sign in
+                    </Link>{" "}
+                    <button
+                      className="secondary small"
+                      onClick={() => void load(true)}
+                    >
+                      Retry connection
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <label className="consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>
+                I allow external AI processing of my audio, messages and
+                uploaded records for transcription, OCR and extraction. Files
+                stay private in this workspace; the configured provider’s
+                retention terms apply.
+              </span>
+            </label>
+
             <div className="voice-zone">
               <FolioCharacter
                 speaking={speaking}
@@ -465,7 +648,27 @@ export default function Dashboard() {
               <div className="folio-actions">
                 <button
                   className="primary"
-                  disabled={busy && !recording}
+                  disabled={
+                    !callActive && (!business || !consent || busy || recording)
+                  }
+                  onClick={() => {
+                    if (callActive) endConversation();
+                    else {
+                      callRef.current = true;
+                      setCallActive(true);
+                      setAutoSendVoice(true);
+                      setMuted(false);
+                      void record();
+                    }
+                  }}
+                >
+                  {callActive
+                    ? "End conversation"
+                    : "Activate Folio · hands-free"}
+                </button>
+                <button
+                  className="primary"
+                  disabled={!recording && (busy || !business || !consent)}
                   onClick={() => void record()}
                   aria-label={recording ? "Stop recording" : "Talk to Folio"}
                 >
@@ -489,6 +692,16 @@ export default function Dashboard() {
                   {speaking ? "Stop voice" : "Hear Folio"}
                 </button>
               </div>
+              <label className="consent">
+                <input
+                  type="checkbox"
+                  disabled={callActive}
+                  checked={autoSendVoice}
+                  onChange={(e) => setAutoSendVoice(e.target.checked)}
+                />
+                Send my voice transcript to Folio automatically. I can edit it
+                afterwards.
+              </label>
               <div className="voice-controls">
                 <select
                   aria-label="Conversation language"
@@ -514,19 +727,6 @@ export default function Dashboard() {
                 per recording.
               </small>
             </div>
-            <label className="consent">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
-              <span>
-                I allow external AI processing of my audio, messages and
-                uploaded records for transcription, OCR and extraction. Files
-                stay private in this workspace; the configured provider’s
-                retention terms apply.
-              </span>
-            </label>
             <div className="conversation" aria-live="polite">
               <div className="bubble assistant">
                 <span>FOLIO ASSISTANT</span>
@@ -619,6 +819,15 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+            {jobs
+              .filter((j) => j.kind === "conversation" && j.status === "failed")
+              .slice(0, 1)
+              .map((j) => (
+                <div className="notice" role="alert" key={j.id}>
+                  Folio could not answer:{" "}
+                  {j.error || "Please retry your message."}
+                </div>
+              ))}
             <div className="reply">
               <label className="sr-only" htmlFor="reply">
                 Type or correct your reply
@@ -631,7 +840,7 @@ export default function Dashboard() {
               />
               <button
                 className="primary"
-                disabled={busy || !text.trim()}
+                disabled={busy || !text.trim() || !business || !consent}
                 onClick={() => void send()}
               >
                 Send <ArrowUpRight size={16} />

@@ -64,15 +64,13 @@ export async function runOne(ownerId?: string) {
         } else if (job.kind === "transcribe") {
           const transcript = await transcribe(bytes, upload.name, upload.mime);
           checked(
-            await db
-              .from("conversations")
-              .upsert({
-                id: job.id,
-                user_id: job.user_id,
-                business_id: job.business_id,
-                role: "user",
-                content: transcript,
-              }),
+            await db.from("conversations").upsert({
+              id: job.id,
+              user_id: job.user_id,
+              business_id: job.business_id,
+              role: "user",
+              content: transcript,
+            }),
           );
           result = {
             transcript,
@@ -97,15 +95,13 @@ export async function runOne(ownerId?: string) {
           );
           for (const figure of figures)
             checked(
-              await db
-                .from("extracted_figures")
-                .insert({
-                  user_id: job.user_id,
-                  business_id: job.business_id,
-                  upload_id: upload.id,
-                  data: { ...figure, file: upload.name },
-                  reviewed: false,
-                }),
+              await db.from("extracted_figures").insert({
+                user_id: job.user_id,
+                business_id: job.business_id,
+                upload_id: upload.id,
+                data: { ...figure, file: upload.name },
+                reviewed: false,
+              }),
             );
           if (process.env.EMBEDDING_API_KEY) {
             checked(
@@ -119,16 +115,14 @@ export async function runOne(ownerId?: string) {
               for (let i = 0; i < seg.text.length; i += 3000) {
                 const content = seg.text.slice(i, i + 3500);
                 checked(
-                  await db
-                    .from("private_embeddings")
-                    .insert({
-                      user_id: job.user_id,
-                      business_id: job.business_id,
-                      upload_id: upload.id,
-                      location: seg.location,
-                      content,
-                      embedding: await embed(content),
-                    }),
+                  await db.from("private_embeddings").insert({
+                    user_id: job.user_id,
+                    business_id: job.business_id,
+                    upload_id: upload.id,
+                    location: seg.location,
+                    content,
+                    embedding: await embed(content),
+                  }),
                 );
               }
             }
@@ -154,17 +148,16 @@ export async function runOne(ownerId?: string) {
           payload.transcript,
           payload.language,
           payload.records || [],
+          payload.history || [],
         );
         checked(
-          await db
-            .from("conversations")
-            .upsert({
-              id: job.id,
-              user_id: job.user_id,
-              business_id: job.business_id,
-              role: "assistant",
-              content: (result as { reply: string }).reply,
-            }),
+          await db.from("conversations").upsert({
+            id: job.id,
+            user_id: job.user_id,
+            business_id: job.business_id,
+            role: "assistant",
+            content: (result as { reply: string }).reply,
+          }),
         );
       } else if (job.kind === "report") {
         const calculation = calculate(payload.input);
@@ -238,17 +231,15 @@ export async function runOne(ownerId?: string) {
           const buffer = await fn(calculation);
           const path = `${job.user_id}/${job.business_id}/reports/${reportId}.${format}`;
           checked(
-            await db.storage
-              .from("business-private")
-              .upload(path, buffer, {
-                contentType:
-                  format === "pdf"
-                    ? "application/pdf"
-                    : format === "docx"
-                      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                upsert: true,
-              }),
+            await db.storage.from("business-private").upload(path, buffer, {
+              contentType:
+                format === "pdf"
+                  ? "application/pdf"
+                  : format === "docx"
+                    ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              upsert: true,
+            }),
           );
           paths[format] = path;
           await update({
@@ -256,17 +247,15 @@ export async function runOne(ownerId?: string) {
           });
         }
         checked(
-          await db
-            .from("report_versions")
-            .upsert({
-              id: reportId,
-              user_id: job.user_id,
-              business_id: job.business_id,
-              type: calculation.input.reportType,
-              input: calculation.input,
-              calculation: { ...calculation, references },
-              paths,
-            }),
+          await db.from("report_versions").upsert({
+            id: reportId,
+            user_id: job.user_id,
+            business_id: job.business_id,
+            type: calculation.input.reportType,
+            input: calculation.input,
+            calculation: { ...calculation, references },
+            paths,
+          }),
         );
         result = {
           reportId,
