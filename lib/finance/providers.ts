@@ -41,6 +41,7 @@ export async function llm(system: string, data: unknown) {
       data,
       undefined,
       true,
+      process.env.FIREBASE_CHAT_MODEL,
     );
   const c = config("LLM");
   const r = await request(

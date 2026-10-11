@@ -55,6 +55,7 @@ export default function Dashboard() {
     [callActive, setCallActive] = useState(false),
     [workspaceLoading, setWorkspaceLoading] = useState(true),
     [speaking, setSpeaking] = useState(false),
+    [voicePhase, setVoicePhase] = useState("idle"),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(""),
@@ -85,6 +86,7 @@ export default function Dashboard() {
     setSpeaking(false);
     setRecording(false);
     setMuted(true);
+    setVoicePhase("idle");
   }
   const loading = useRef(false);
   const saveInFlight = useRef(false),
@@ -130,14 +132,20 @@ export default function Dashboard() {
         )) {
           if (job.status === "failed" && !handled.current.has(job.id)) {
             handled.current.add(job.id);
+            if (job.kind === "conversation") setVoicePhase("idle");
             if (callRef.current && job.kind === "conversation") {
               endConversation();
-              setNotice("Folio could not finish this reply. Please retry your message.");
+              setNotice(
+                "Folio could not finish this reply. Please retry your message.",
+              );
             }
           }
           if (job.status === "succeeded" && !handled.current.has(job.id)) {
             handled.current.add(job.id);
-            if (job.kind === "conversation") setConversationResult(job.result);
+            if (job.kind === "conversation") {
+              setConversationResult(job.result);
+              setVoicePhase("ready");
+            }
             if (job.kind === "transcribe") setText(job.result.transcript);
           }
         }
@@ -199,6 +207,7 @@ export default function Dashboard() {
     try {
       await fn();
     } catch (e) {
+      setVoicePhase("idle");
       if (callRef.current) endConversation();
       setNotice(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -219,6 +228,7 @@ export default function Dashboard() {
       consent,
     });
     setText("");
+    setVoicePhase("thinking");
     setNotice("Folio is thinking. Your answer will appear below shortly.");
     await load();
   }
@@ -237,6 +247,7 @@ export default function Dashboard() {
     const form = new FormData();
     form.set("audio", file);
     form.set("consent", "true");
+    setVoicePhase("transcribing");
     setNotice("Listening complete. Converting your voice to text…");
     const result = await readJSON(
       await fetch("/api/voice", { method: "POST", body: form }),
@@ -302,6 +313,7 @@ export default function Dashboard() {
         throw Error(
           "Recording is not supported here. Upload a voice note instead.",
         );
+      setVoicePhase("permission");
       const startedAsCall = callRef.current;
       try {
         stream.current = await navigator.mediaDevices.getUserMedia({
@@ -400,6 +412,7 @@ export default function Dashboard() {
         };
       }
       setRecording(true);
+      setVoicePhase("listening");
       setNotice(
         callRef.current
           ? "I’m listening. Pause when you finish; Folio will reply and listen again."
@@ -586,7 +599,10 @@ export default function Dashboard() {
                   muted ? "Unmute spoken responses" : "Mute spoken responses"
                 }
                 className="icon-btn"
-                onClick={() => setMuted(!muted)}
+                onClick={() => {
+                  if (callRef.current) endConversation();
+                  else setMuted(!muted);
+                }}
               >
                 {muted ? <VolumeX /> : <Volume2 />}
               </button>
@@ -616,155 +632,185 @@ export default function Dashboard() {
               <input
                 type="checkbox"
                 checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
+                onChange={(e) => {
+                  setConsent(e.target.checked);
+                  if (!e.target.checked) endConversation();
+                }}
               />
               <span>
-                I allow external AI processing of my audio, messages and
-                uploaded records for transcription, OCR and extraction. Files
-                stay private in this workspace; the configured provider’s
+                Allow AI to process my voice, messages and documents. Provider
                 retention terms apply.
               </span>
             </label>
 
-            <div className="voice-zone">
-              <FolioCharacter
-                speaking={speaking}
-                listening={recording}
-                thinking={
-                  busy ||
-                  jobs.some((j) => ["queued", "running"].includes(j.status))
+            <div className="voice-zone folio-simple">
+              <button
+                className="folio-tap"
+                aria-label={
+                  callActive ? "End conversation" : "Tap to talk with Folio"
                 }
-              />
-              <h3>
-                {recording
-                  ? "I’m listening. Tell me about your business."
-                  : "Your business story. Let’s work it out."}
-              </h3>
-              <p className="folio-intro">
-                I’m Folio, your AI financial report guide. I’ll help you
-                understand the numbers and prepare your lending story, one
-                question at a time.
-              </p>
-              <div className="folio-actions">
-                <button
-                  className="primary"
-                  disabled={
-                    !callActive && (!business || !consent || busy || recording)
+                aria-pressed={callActive}
+                disabled={
+                  !callActive &&
+                  (!business ||
+                    !consent ||
+                    busy ||
+                    jobs.some(
+                      (j) =>
+                        j.kind === "conversation" &&
+                        ["queued", "running"].includes(j.status),
+                    ))
+                }
+                onClick={() => {
+                  if (callActive) {
+                    endConversation();
+                    setNotice(
+                      "Conversation paused. Tap Folio whenever you’re ready.",
+                    );
+                  } else {
+                    callRef.current = true;
+                    setCallActive(true);
+                    setAutoSendVoice(true);
+                    setMuted(false);
+                    void record();
                   }
-                  onClick={() => {
-                    if (callActive) endConversation();
-                    else {
-                      callRef.current = true;
-                      setCallActive(true);
-                      setAutoSendVoice(true);
-                      setMuted(false);
-                      void record();
-                    }
-                  }}
-                >
-                  {callActive
-                    ? "End conversation"
-                    : "Activate Folio · hands-free"}
-                </button>
-                <button
-                  className="primary"
-                  disabled={!recording && (busy || !business || !consent)}
-                  onClick={() => void record()}
-                  aria-label={recording ? "Stop recording" : "Talk to Folio"}
-                >
-                  {recording ? <Square size={19} /> : <Mic size={19} />}{" "}
-                  {recording ? "Finish speaking" : "Talk to Folio"}
-                </button>
-                <button
-                  className="secondary"
-                  disabled={recording}
-                  onClick={() => {
-                    if (speaking) {
-                      speechSynthesis.cancel();
-                      setSpeaking(false);
-                    } else {
-                      setMuted(false);
-                      speak(true);
-                    }
-                  }}
-                >
-                  {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}{" "}
-                  {speaking ? "Stop voice" : "Hear Folio"}
-                </button>
-              </div>
-              <label className="consent">
-                <input
-                  type="checkbox"
-                  disabled={callActive}
-                  checked={autoSendVoice}
-                  onChange={(e) => setAutoSendVoice(e.target.checked)}
+                }}
+              >
+                <FolioCharacter
+                  speaking={speaking}
+                  listening={recording}
+                  thinking={busy || voicePhase === "thinking"}
                 />
-                Send my voice transcript to Folio automatically. I can edit it
-                afterwards.
-              </label>
-              <div className="voice-controls">
-                <select
-                  aria-label="Conversation language"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                >
-                  {["English", "Hindi", "Marathi", "Mixed"].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <label className="file-label">
-                  <Upload size={14} /> Voice note
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => void uploadFiles(e.target.files, "audio")}
-                  />
-                </label>
+                <span className="folio-tap-label">
+                  {callActive ? "Tap to end" : "Tap to talk"}
+                </span>
+              </button>
+              <div
+                className="folio-feedback"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <strong>
+                  {speaking
+                    ? "Folio is speaking"
+                    : recording
+                      ? "Listening to you…"
+                      : voicePhase === "permission"
+                        ? "Allow your microphone"
+                        : voicePhase === "transcribing"
+                          ? "Got it. Understanding your voice…"
+                          : voicePhase === "thinking"
+                            ? "Thinking about your answer…"
+                            : voicePhase === "ready"
+                              ? "Your reply is ready"
+                              : "Let’s talk about your business"}
+                </strong>
+                <p>
+                  {speaking
+                    ? "I’ll listen again when I finish."
+                    : recording
+                      ? "Speak naturally. Pause when you’re done."
+                      : voicePhase === "permission"
+                        ? "Choose Allow in your browser’s microphone prompt."
+                        : ["thinking", "transcribing"].includes(voicePhase)
+                          ? "You don’t need to tap again."
+                          : "One question at a time. Voice or text."}
+                </p>
               </div>
-              <small>
-                AI replies are spoken using your device’s available voices.
-                Review your transcript before sending. Up to 3 minutes / 4 MB
-                per recording.
-              </small>
-            </div>
-            <div className="conversation" aria-live="polite">
-              <div className="bubble assistant">
-                <span>FOLIO ASSISTANT</span>
-                <p>{nextQuestion(data.profile).question}</p>
-              </div>
-              {messages.map((m) => (
-                <div key={m.id} className={"bubble " + m.role}>
-                  <span>
-                    {m.role === "user" ? "YOUR NOTES" : "FOLIO ASSISTANT"}
-                  </span>
-                  {m.role === "user" ? (
-                    <textarea
-                      aria-label="Editable transcript"
-                      defaultValue={m.content}
-                      onBlur={(e) => {
-                        if (e.target.value !== m.content)
-                          void action(async () => {
-                            await api({
-                              action: "edit-transcript",
-                              businessId: business?.id,
-                              messageId: m.id,
-                              content: e.target.value,
-                            });
-                            setText(e.target.value);
-                            setNotice(
-                              "Transcript corrected. Send the edited text to update the business summary.",
-                            );
-                          });
-                      }}
+              <details className="folio-options">
+                <summary>Language & voice options</summary>
+                <div className="voice-controls">
+                  <select
+                    aria-label="Conversation language"
+                    value={language}
+                    disabled={callActive}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    {["English", "Hindi", "Marathi", "Mixed"].map((x) => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </select>
+                  <label className="file-label">
+                    <Upload size={14} /> Upload voice note
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      disabled={callActive || busy}
+                      onChange={(e) =>
+                        void uploadFiles(e.target.files, "audio")
+                      }
                     />
-                  ) : (
-                    <p>{m.content}</p>
-                  )}
+                  </label>
                 </div>
-              ))}
+                <label className="consent">
+                  <input
+                    type="checkbox"
+                    checked={autoSendVoice}
+                    disabled={callActive}
+                    onChange={(e) => setAutoSendVoice(e.target.checked)}
+                  />
+                  Send voice notes automatically
+                </label>
+                <small>
+                  Device voice · Up to 3 minutes / 4 MB per turn. Turn off
+                  automatic sending to review uploaded notes first.
+                </small>
+              </details>
             </div>
+            {messages.length > 0 && (
+              <div className="folio-latest">
+                <span>FOLIO</span>
+                <p>
+                  {[...messages].reverse().find((m) => m.role === "assistant")
+                    ?.content || "Thanks. I’m preparing your reply."}
+                </p>
+              </div>
+            )}
+            <details className="folio-history">
+              <summary>
+                Conversation & editable transcripts ({messages.length})
+              </summary>
+              <div className="conversation" aria-live="polite">
+                <div className="bubble assistant">
+                  <span>FOLIO ASSISTANT</span>
+                  <p>{nextQuestion(data.profile).question}</p>
+                </div>
+                {messages.map((m) => (
+                  <div key={m.id} className={"bubble " + m.role}>
+                    <span>
+                      {m.role === "user" ? "YOUR NOTES" : "FOLIO ASSISTANT"}
+                    </span>
+                    {m.role === "user" ? (
+                      <textarea
+                        aria-label="Editable transcript"
+                        defaultValue={m.content}
+                        onBlur={(e) => {
+                          if (e.target.value !== m.content)
+                            void action(async () => {
+                              await api({
+                                action: "edit-transcript",
+                                businessId: business?.id,
+                                messageId: m.id,
+                                content: e.target.value,
+                              });
+                              setText(e.target.value);
+                              setNotice(
+                                "Transcript corrected. Send the edited text to update the business summary.",
+                              );
+                            });
+                        }}
+                      />
+                    ) : (
+                      <p>{m.content}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
             {conversationResult && (
-              <div className="notice">
+              <details className="notice">
+                <summary>Review suggested business details</summary>
                 <p>
                   Assistant found{" "}
                   {Object.keys(conversationResult.updates || {}).length} new
@@ -817,7 +863,7 @@ export default function Dashboard() {
                     Correct this in the business summary.
                   </p>
                 ))}
-              </div>
+              </details>
             )}
             {jobs
               .filter((j) => j.kind === "conversation" && j.status === "failed")
@@ -836,11 +882,13 @@ export default function Dashboard() {
                 id="reply"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Type a reply, or edit your transcribed voice note…"
+                placeholder="Or type your answer…"
               />
               <button
                 className="primary"
-                disabled={busy || !text.trim() || !business || !consent}
+                disabled={
+                  callActive || busy || !text.trim() || !business || !consent
+                }
                 onClick={() => void send()}
               >
                 Send <ArrowUpRight size={16} />

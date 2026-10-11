@@ -2025,3 +2025,99 @@ textarea {
     animation: none !important;
   }
 }
+
+/* Folio: one tap target, persistent action feedback, secondary tools on demand. */
+.folio-tap {
+  display: block;
+  width: min(100%, 280px);
+  margin: 0 auto;
+  padding: 12px;
+  border: 1px solid #ffffffcf;
+  border-radius: 36px;
+  background: #ffffff70;
+  color: #183d46;
+  cursor: pointer;
+  box-shadow: 0 16px 40px #234c5c12;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+.folio-tap:hover:not(:disabled) {
+  transform: translateY(-3px);
+  background: #ffffffc9;
+}
+.folio-tap:focus-visible {
+  outline: 3px solid #186e7b;
+  outline-offset: 5px;
+}
+.folio-tap:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.folio-tap[aria-pressed="true"] {
+  border-color: #3c9382;
+  background: #e7f4ee;
+}
+.folio-tap .folio-character {
+  max-width: 210px;
+  margin-bottom: 0;
+}
+.folio-tap .folio-status {
+  display: none;
+}
+.folio-tap-label {
+  display: block;
+  font-size: 17px;
+  font-weight: 650;
+  padding: 8px 0;
+}
+.folio-feedback {
+  margin: 20px auto 0;
+  min-height: 64px;
+}
+.folio-feedback strong {
+  font-size: 18px;
+}
+.folio-feedback p {
+  font-size: 14px;
+  margin: 8px 0 !important;
+}
+.folio-options {
+  text-align: left;
+  margin-top: 18px;
+  border-top: 1px solid #28455a20;
+  padding-top: 14px;
+}
+.folio-options summary,
+.folio-history summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: #36566b;
+  padding: 8px 0;
+}
+.folio-history {
+  margin: 14px 0;
+}
+.folio-latest {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: #f1f6f6;
+  border-radius: 18px;
+}
+.folio-latest span {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #446b62;
+}
+.folio-latest p {
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .folio-tap {
+    transition: none;
+  }
+  .folio-tap:hover:not(:disabled) {
+    transform: none;
+  }
+}

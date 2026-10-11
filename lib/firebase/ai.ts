@@ -12,8 +12,9 @@ export async function firebaseGenerate(
   data: unknown,
   media?: { bytes: Buffer; mime: string },
   json = false,
+  modelOverride?: string,
 ) {
-  const modelName = process.env.FIREBASE_AI_MODEL;
+  const modelName = modelOverride || process.env.FIREBASE_AI_MODEL;
   if (!modelName)
     throw Error("CONFIG: Set FIREBASE_AI_MODEL to enable Firebase AI.");
   const app =

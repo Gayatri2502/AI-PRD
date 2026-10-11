@@ -73,3 +73,7 @@ Reports are drafts for review, even after inputs are confirmed. Folio is not a l
 ## Security
 
 Client Firestore reads/writes are denied. Authenticated Node routes verify Firebase session cookies and owner filters; optimistic draft writes and processing quotas use Firestore transactions. Storage creates are restricted to the signed-in owner and a server-registered upload. Downloads use 60-second signed links. Keep credentials server-only. See the validation record before treating this as a public production service.
+
+### Folio voice assistant
+
+Set `FIREBASE_CHAT_MODEL=gemini-3.5-flash` for conversation and narrative reasoning. `FIREBASE_AI_MODEL` remains the base model for transcription and other multimodal processing; if the chat override is absent, chat uses that base model. Keys stay in the existing Firebase configuration. Tap Folio to begin a hands-free turn-taking conversation and tap again to end. Visible feedback distinguishes microphone permission, listening, transcription, reasoning and spoken playback. Audio playback uses the browser’s device voices, not Gemini native audio. Language, uploads and transcript history are collapsed by default. Consent and an authenticated session are required.
