@@ -44,6 +44,14 @@ try {
   assert.equal(denied.status, 401);
   assert.ok(denied.headers.get("content-type")?.includes("json"));
   console.log("Unauthenticated isolation: OK");
+  if (process.env.SMOKE_REALTIME === "1") {
+    const capability = await fetch(`${origin}/api/voice/realtime`, { headers: { Cookie: cookie } });
+    assert.equal(capability.status, 200);
+    assert.equal((await capability.json()).available, true);
+    const invalid = await fetch(`${origin}/api/voice/realtime`, {method: "POST", headers: {Origin: origin, Cookie: cookie, "Content-Type": "application/json"}, body: JSON.stringify({consent: false})});
+    assert.equal(invalid.status, 400);
+    console.log("Realtime key configuration and consent validation: OK");
+  }
   if (process.env.SMOKE_AI === "1") {
     const demo = await fetch(`${origin}/api/demo`, {
       method: "POST",

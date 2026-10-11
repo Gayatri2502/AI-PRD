@@ -77,3 +77,11 @@ Client Firestore reads/writes are denied. Authenticated Node routes verify Fireb
 ### Folio voice assistant
 
 Set `FIREBASE_CHAT_MODEL=gemini-3.6-flash` for conversation and narrative reasoning. `FIREBASE_AI_MODEL` remains the base model for transcription and other multimodal processing; if the chat override is absent, chat uses that base model. Keys stay in the existing Firebase configuration. Tap Folio to begin a hands-free turn-taking conversation and tap again to end. Visible feedback distinguishes microphone permission, listening, transcription, reasoning and spoken playback. Audio playback uses the browser’s device voices, not Gemini native audio. Language, uploads and transcript history are collapsed by default. Consent and an authenticated session are required.
+
+### OpenAI native voice
+
+Configure server-only OPENAI_API_KEY in Vercel Production, then redeploy. OPENAI_REALTIME_MODEL defaults to gpt-realtime-2.1; OPENAI_CHAT_MODEL defaults to gpt-4o. Authenticated users with processing consent connect through a server-authorized WebRTC SDP exchange; the permanent key is never returned to the browser. GPT-4o handles structured conversation extraction when the key is configured. The existing Gemini flow remains available when the key is absent.
+
+End a native voice call to copy its user transcripts into the reply editor, then review and send to update report fields. Native audio usage is not included in the existing provider-token dashboard; use OpenAI project billing limits and usage for that traffic. Session starts count against the application daily request allowance. The ten-minute UI timer is a convenience limit, not a tamper-proof server billing cap. Server-side call lifecycle enforcement and authoritative audio token accounting remain required before offering a paid/public voice allowance.
+
+The existing production secret named folio is accepted as a server-only alias for OPENAI_API_KEY because Vercel does not allow renaming sensitive variables. OPENAI_API_KEY takes precedence.

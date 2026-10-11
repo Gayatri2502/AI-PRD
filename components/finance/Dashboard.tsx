@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import RealtimeVoice from "./RealtimeVoice";
 import FolioCharacter from "./FolioCharacter";
 import { readJSON } from "@/lib/http";
 import {
@@ -54,6 +55,7 @@ export default function Dashboard() {
     [autoSendVoice, setAutoSendVoice] = useState(true),
     [callActive, setCallActive] = useState(false),
     [workspaceLoading, setWorkspaceLoading] = useState(true),
+    [realtimeAvailable, setRealtimeAvailable] = useState(false),
     [speaking, setSpeaking] = useState(false),
     [voicePhase, setVoicePhase] = useState("idle"),
     [notice, setNotice] = useState(""),
@@ -159,6 +161,7 @@ export default function Dashboard() {
   }
   useEffect(() => {
     void load(true);
+    fetch("/api/voice/realtime").then(r => r.json()).then(j => setRealtimeAvailable(j.available === true)).catch(() => {});
     const timer = setInterval(() => void load(), 4000);
     return () => {
       clearInterval(timer);
@@ -594,7 +597,7 @@ export default function Dashboard() {
                 <p className="eyebrow">STEP 01 · BUSINESS DETAILS</p>
                 <h2>Meet Folio</h2>
               </div>
-              <button
+              {!realtimeAvailable && <button
                 aria-label={
                   muted ? "Unmute spoken responses" : "Mute spoken responses"
                 }
@@ -605,7 +608,7 @@ export default function Dashboard() {
                 }}
               >
                 {muted ? <VolumeX /> : <Volume2 />}
-              </button>
+              </button>}
             </div>
             {!business && (
               <div className="notice" role="status">
@@ -643,7 +646,7 @@ export default function Dashboard() {
               </span>
             </label>
 
-            <div className="voice-zone folio-simple">
+            {realtimeAvailable && business ? <RealtimeVoice businessId={business.id} consent={consent} language={language} onComplete={(notes) => {setText(notes); setMuted(true); setNotice("Voice notes ready. Review and send them below to update your report details.");}} /> : <div className="voice-zone folio-simple">
               <button
                 className="folio-tap"
                 aria-label={
@@ -758,6 +761,7 @@ export default function Dashboard() {
                 </small>
               </details>
             </div>
+            }
             {messages.length > 0 && (
               <div className="folio-latest">
                 <span>FOLIO</span>
