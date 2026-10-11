@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { attachVoiceMeter } from "@/lib/finance/voice-meter";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { currentUser, ownBusiness } from "@/lib/firebase/server";
@@ -7,7 +8,7 @@ import { sameOrigin } from "@/lib/origin";
 import { realtimeConfig } from "@/lib/finance/realtime";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 const input = z.object({
   businessId: z.string().uuid(),
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     await reserveRequest(user.id);
     const form = new FormData();
     form.set("sdp", body.sdp);
-    form.set("session", JSON.stringify(realtimeConfig(business.data?.profile || {}, body.language)));
+    form.set("session", JSON.stringify(realtimeConfig(business.data || {}, body.language)));
     const response = await fetch("https://api.openai.com/v1/realtime/calls", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "OpenAI-Safety-Identifier": createHash("sha256").update(user.id).digest("hex") },
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(40000),
     });
     if (!response.ok) return NextResponse.json({ error: response.status === 429 ? "OpenAI voice quota or billing limit reached. Check your OpenAI API account." : "OpenAI could not start voice. Check API billing, model access and key permissions." }, { status: 502 });
+    const callId = response.headers.get("location")?.split("/").pop();
+    if (!callId || !/^rtc_[A-Za-z0-9_-]+$/.test(callId)) throw Error("Missing call identity");
+    const meter = await attachVoiceMeter(user.id, callId, key);
+    after(() => meter.done);
     return NextResponse.json({ sdp: await response.text() }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     const auth = e instanceof Error && e.message.startsWith("AUTH:");

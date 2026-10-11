@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import FolioCharacter from "./FolioCharacter";
 import { readJSON } from "@/lib/http";
 
-export default function RealtimeVoice({ businessId, consent, language, onComplete }: {
-  businessId: string; consent: boolean; language: string; onComplete: (transcript: string) => void;
+export default function RealtimeVoice({ businessId, consent, language, onComplete, onAction }: {
+  businessId: string; consent: boolean; language: string; onComplete: (transcript: string) => void; onAction: (action: unknown) => Promise<unknown>;
 }) {
+  const actionRef = useRef(onAction); actionRef.current = onAction;
   const [phase, setPhase] = useState("idle"), [reply, setReply] = useState(""), [error, setError] = useState(""), [selectedLanguage, setSelectedLanguage] = useState(language);
   const connection = useRef<RTCPeerConnection | null>(null), stream = useRef<MediaStream | null>(null), audio = useRef<HTMLAudioElement | null>(null);
   const active = useRef(false), turns = useRef<string[]>([]), timer = useRef<ReturnType<typeof setTimeout> | null>(null), generation = useRef(0);
@@ -38,11 +39,12 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       const channel = pc.createDataChannel("oai-events");
       channel.onopen = () => {
         if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => { setError("Voice session ended after 10 minutes. Tap to start another."); stop(); }, 600000);
+        timer.current = setTimeout(() => { setError("Voice session ended after four minutes. Tap to continue."); stop(); }, 235000);
         setPhase("listening");
         channel.send(JSON.stringify({ type: "response.create", response: { instructions: "Greet the user briefly as Folio and ask one missing business question. Use the configured language." } }));
       };
-      channel.onmessage = e => {
+      const handledCalls = new Set<string>();
+      channel.onmessage = async e => {
         if (!active.current) return;
         let event; try { event = JSON.parse(e.data); } catch { return; }
         if (event.type === "input_audio_buffer.speech_started") setPhase("listening");
@@ -51,6 +53,20 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
         if (["output_audio_buffer.stopped", "output_audio_buffer.cleared"].includes(event.type)) setPhase("listening");
         if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) turns.current.push(event.transcript);
         if (event.type === "response.output_audio_transcript.done") setReply(event.transcript || "");
+        if (event.type === "response.done") for (const call of event.response?.output || []) {
+          if (call.type !== "function_call" || handledCalls.has(call.call_id)) continue;
+          handledCalls.add(call.call_id);
+          setPhase("thinking");
+          let output;
+          try {
+            if (call.name !== "folio_action") throw Error("Unsupported action");
+            output = await actionRef.current(JSON.parse(call.arguments));
+          } catch { output = { error: "Could not apply that action. Ask for missing details or ask the user to review the dashboard." }; }
+          if (channel.readyState === "open") {
+            channel.send(JSON.stringify({ type: "conversation.item.create", item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(output) } }));
+            if (call === event.response.output.filter((item: { type: string }) => item.type === "function_call").at(-1)) channel.send(JSON.stringify({ type: "response.create" }));
+          }
+        }
         if (event.type === "error") { setError("OpenAI voice encountered an error. Tap to try again."); stop(); }
       };
       setPhase("connecting");
@@ -76,6 +92,6 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
     {error && <p role="alert">{error}</p>}
     <select aria-label="Voice language" disabled={phase !== "idle"} value={selectedLanguage} onChange={e => setSelectedLanguage(e.target.value)}>{["English", "Hindi", "Marathi", "Mixed"].map(x => <option key={x}>{x}</option>)}</select>
     <audio ref={audio} autoPlay controls aria-label="Folio voice playback" style={{ width: "100%", height: 32 }} />
-    <small>OpenAI native voice · End the call to review your notes. Live audio tokens are not yet included in the daily token counter.</small>
+    <small>Ask Folio to update your details, change report style, or review your report. Voice tokens sync with your daily usage. Calls last up to four minutes.</small>
   </div>;
 }

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import RealtimeVoice from "./RealtimeVoice";
+import { voiceActionSchema } from "@/lib/finance/voice-actions";
 import FolioCharacter from "./FolioCharacter";
 import { readJSON } from "@/lib/http";
 import {
@@ -96,6 +97,8 @@ export default function Dashboard() {
   latestData.current = data;
   const patch = (next: ReportInput) => {
     setData({ ...next, confirmed: false });
+    setReview(false);
+    setPreview(null);
     dirty.current = true;
   };
   async function api(body: unknown) {
@@ -499,6 +502,40 @@ export default function Dashboard() {
     setPreview(parsed);
     setReview(true);
   }
+  async function voiceAction(raw: unknown) {
+    const command = voiceActionSchema.parse(raw);
+    const current = latestData.current;
+    if (command.action === "update_business") {
+      const next = { ...current, profile: { ...current.profile, ...command.profile }, assumptions: { ...current.assumptions, ...command.assumptions }, confirmed: false };
+      latestData.current = next;
+      patch(next);
+      setNotice("Folio updated your draft details. Please check the values before generating.");
+      return { status: "Draft updated; autosave pending. Inputs require review before generation." };
+    }
+    if (command.action === "report_settings") {
+      const { action: _, ...settings } = command;
+      const next = { ...current, ...settings, confirmed: false };
+      latestData.current = next; patch(next);
+      setNotice("Report settings updated.");
+      return { status: "Report settings updated", ...settings };
+    }
+    if (command.action === "review_report") {
+      const result = calculate({ ...current, confirmed: true });
+      if (result.issues.length) return { missingOrConflictingInputs: result.issues };
+      setPreview(result); setReview(true);
+      setNotice("Review your figures, then confirm generation in the review panel.");
+      return { status: "Review panel opened. The user must confirm the figures and press Generate. No report has been generated yet." };
+    }
+    if (command.action === "show_usage") {
+      const response = await fetch("/api/workspace", { cache: "no-store" });
+      const workspace = await readJSON(response);
+      if (!response.ok) throw Error("Unable to read usage");
+      setUsage(workspace.usage);
+      return { usage: workspace.usage };
+    }
+    setNotice("Your saved reports are listed below in this dashboard.");
+    return { reports: reports.map(r => ({ id: r.id, created_at: r.created_at, status: r.status || "saved" })) };
+  }
   async function generate() {
     await action(async () => {
       if (!business) throw Error("Sign in before generating saved reports.");
@@ -646,7 +683,7 @@ export default function Dashboard() {
               </span>
             </label>
 
-            {realtimeAvailable && business ? <RealtimeVoice businessId={business.id} consent={consent} language={language} onComplete={(notes) => {setText(notes); setMuted(true); setNotice("Voice notes ready. Review and send them below to update your report details.");}} /> : <div className="voice-zone folio-simple">
+            {realtimeAvailable && business ? <RealtimeVoice businessId={business.id} consent={consent} language={language} onAction={voiceAction} onComplete={(notes) => {setText(notes); setMuted(true); setNotice("Voice notes ready below. Draft changes made during the call are available for review.");}} /> : <div className="voice-zone folio-simple">
               <button
                 className="folio-tap"
                 aria-label={
