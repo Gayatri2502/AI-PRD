@@ -1900,3 +1900,128 @@ textarea {
     backdrop-filter: none;
   }
 }
+
+.folio-character {
+  max-width: 270px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+.folio-character svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.folio-body {
+  transform-origin: 160px 240px;
+  animation: folio-breathe 5s ease-in-out infinite;
+}
+.folio-mouth {
+  display: none;
+  transform-origin: 160px 145px;
+}
+.speaking .folio-mouth {
+  display: block;
+  animation: folio-talk 0.28s ease-in-out infinite alternate;
+}
+.speaking .folio-smile {
+  display: none;
+}
+.listening .folio-body {
+  transform: rotate(-4deg);
+  animation: none;
+}
+.thinking .folio-sparks {
+  animation: folio-spin 5s linear infinite;
+  transform-origin: 160px 140px;
+}
+.folio-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ffffffbd;
+  border-radius: 40px;
+  padding: 7px 13px;
+  background: #ffffffa8;
+  font-size: 12px;
+  color: #315d59;
+}
+.folio-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4a9281;
+}
+.speaking .folio-status i,
+.listening .folio-status i {
+  animation: folio-breathe 0.8s infinite;
+}
+.folio-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 22px 0;
+}
+.folio-intro {
+  max-width: 420px;
+  margin: 12px auto !important;
+}
+.voice-zone:has(.folio-character) {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    #e5f3e9 0%,
+    #edf0fa80 60%,
+    #ffffff40 100%
+  );
+  border: 1px solid #fff;
+  border-radius: 26px;
+  backdrop-filter: blur(16px);
+  padding: 26px 22px;
+}
+.folio-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.folio-character .folio-wave {
+  transform-origin: 226px 158px;
+  animation: folio-wave 5s ease-in-out infinite;
+}
+@keyframes folio-breathe {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes folio-talk {
+  from {
+    transform: scaleY(0.35);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes folio-wave {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0);
+  }
+  80%,
+  90% {
+    transform: rotate(-12deg);
+  }
+  85%,
+  95% {
+    transform: rotate(5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .folio-body,
+  .folio-character .folio-wave,
+  .speaking .folio-mouth,
+  .thinking .folio-sparks,
+  .folio-status i {
+    animation: none !important;
+  }
+}

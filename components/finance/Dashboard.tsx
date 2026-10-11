@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import FolioCharacter from "./FolioCharacter";
 import { readJSON } from "@/lib/http";
 import {
   Mic,
@@ -50,6 +51,7 @@ export default function Dashboard() {
     [consent, setConsent] = useState(false),
     [muted, setMuted] = useState(true),
     [recording, setRecording] = useState(false),
+    [speaking, setSpeaking] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(""),
@@ -278,10 +280,20 @@ export default function Dashboard() {
       }, 180000);
     });
   }
-  function speak() {
-    const q = conversationResult?.reply || nextQuestion(data.profile).question;
-    if (!muted && "speechSynthesis" in window) {
-      speechSynthesis.cancel();
+  function speak(force = false) {
+    if (!("speechSynthesis" in window)) {
+      setNotice(
+        "Spoken replies are not supported in this browser. You can read Folio’s replies below.",
+      );
+      return;
+    }
+    speechSynthesis.cancel();
+    setSpeaking(false);
+    if ((!muted || force) && !recording) {
+      const q =
+        conversationResult?.reply ||
+        "Hi, I’m Folio, your AI business report guide. We’ll work through your business and finances together, one simple question at a time. " +
+          nextQuestion(data.profile).question;
       const utterance = new SpeechSynthesisUtterance(q);
       utterance.lang =
         language === "Hindi"
@@ -289,12 +301,34 @@ export default function Dashboard() {
           : language === "Marathi"
             ? "mr-IN"
             : "en-IN";
+      const voices = speechSynthesis.getVoices();
+      const voice =
+        voices.find((v) => v.lang === utterance.lang) ||
+        voices.find((v) => v.lang.startsWith(utterance.lang.split("-")[0]));
+      if (voice) utterance.voice = voice;
+      utterance.rate = 0.94;
+      utterance.onstart = () => setSpeaking(true);
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = (event) => {
+        setSpeaking(false);
+        if (!["canceled", "interrupted"].includes(event.error))
+          setNotice(
+            "Your browser could not play this voice. Folio’s reply is available as text below.",
+          );
+      };
       speechSynthesis.speak(utterance);
     }
   }
   useEffect(() => {
-    speak();
-  }, [conversationResult, muted]);
+    if ("speechSynthesis" in window) {
+      speechSynthesis.cancel();
+      setSpeaking(false);
+    }
+    if (!muted && !recording) speak();
+    return () => {
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+    };
+  }, [conversationResult, muted, recording, language]);
   function confirm() {
     const parsed = calculate({ ...data, confirmed: true });
     if (parsed.issues.length) throw Error(parsed.issues.join("\n"));
@@ -397,7 +431,7 @@ export default function Dashboard() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">STEP 01 · BUSINESS DETAILS</p>
-                <h2>Business information assistant</h2>
+                <h2>Meet Folio</h2>
               </div>
               <button
                 aria-label={
@@ -410,22 +444,51 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="voice-zone">
-              <div className="voice-rings">
-                <button
-                  className={"record " + (recording ? "recording" : "")}
-                  disabled={busy}
-                  onClick={() => void record()}
-                  aria-label={recording ? "Stop recording" : "Start recording"}
-                >
-                  {recording ? <Square size={28} /> : <Mic size={34} />}
-                </button>
-              </div>
+              <FolioCharacter
+                speaking={speaking}
+                listening={recording}
+                thinking={
+                  busy ||
+                  jobs.some((j) => ["queued", "running"].includes(j.status))
+                }
+              />
               <h3>
                 {recording
-                  ? "Listening… tap to finish"
-                  : "Start with your own words"}
+                  ? "I’m listening. Tell me about your business."
+                  : "Your business story. Let’s work it out."}
               </h3>
-              <p>“I run a small business in Pune and need a loan to expand.”</p>
+              <p className="folio-intro">
+                I’m Folio, your AI financial report guide. I’ll help you
+                understand the numbers and prepare your lending story, one
+                question at a time.
+              </p>
+              <div className="folio-actions">
+                <button
+                  className="primary"
+                  disabled={busy && !recording}
+                  onClick={() => void record()}
+                  aria-label={recording ? "Stop recording" : "Talk to Folio"}
+                >
+                  {recording ? <Square size={19} /> : <Mic size={19} />}{" "}
+                  {recording ? "Finish speaking" : "Talk to Folio"}
+                </button>
+                <button
+                  className="secondary"
+                  disabled={recording}
+                  onClick={() => {
+                    if (speaking) {
+                      speechSynthesis.cancel();
+                      setSpeaking(false);
+                    } else {
+                      setMuted(false);
+                      speak(true);
+                    }
+                  }}
+                >
+                  {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}{" "}
+                  {speaking ? "Stop voice" : "Hear Folio"}
+                </button>
+              </div>
               <div className="voice-controls">
                 <select
                   aria-label="Conversation language"
@@ -446,8 +509,9 @@ export default function Dashboard() {
                 </label>
               </div>
               <small>
-                Up to 3 minutes per recording. Spoken responses use available
-                device voices.
+                AI replies are spoken using your device’s available voices.
+                Review your transcript before sending. Up to 3 minutes / 4 MB
+                per recording.
               </small>
             </div>
             <label className="consent">
