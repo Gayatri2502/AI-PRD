@@ -1901,6 +1901,40 @@ textarea {
   }
 }
 
+.folio-character { color: #52706d; }
+.folio-halo { opacity: .18; transform-origin: 160px 140px; }
+.folio-listen-waves, .folio-thought, .folio-voice-bars { display: none; }
+.folio-character.listening { color: #167665; }
+.folio-character.listening .folio-listen-waves { display: block; animation: folio-attention 1.8s ease-in-out infinite; }
+.folio-character.listening .folio-halo { animation: folio-halo-pulse 1.8s ease-out infinite; }
+.folio-character.listening .folio-wave { animation: none; transform: rotate(-22deg); }
+.folio-character.thinking { color: #94671b; }
+.folio-character.thinking .folio-body { animation: none; transform: rotate(3deg); }
+.folio-character.thinking .folio-wave { animation: none; }
+.folio-character.thinking .folio-sparks { animation: none; opacity: .3; }
+.folio-character.thinking .folio-thought { display: block; }
+.folio-thought circle { animation: folio-attention 1s ease-in-out infinite alternate; }
+.folio-thought circle:nth-child(2) { animation-delay: .2s; }
+.folio-thought circle:nth-child(3) { animation-delay: .4s; }
+.folio-character.speaking { color: #4e57aa; }
+.folio-character.speaking .folio-voice-bars { display: block; }
+.folio-voice-bars rect { transform-box: fill-box; transform-origin: center; animation: folio-answer .55s ease-in-out infinite alternate; }
+.folio-character.speaking .folio-body { animation: folio-breathe 1.8s ease-in-out infinite; }
+.folio-character.paused .folio-body, .folio-character.paused .folio-wave { animation: none; }
+.folio-character.paused { color: #687781; filter: saturate(.5); }
+.folio-character.paused .folio-wave { transform: rotate(32deg); }
+.folio-phase-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #687781; margin-right: 9px; }
+[data-voice-phase="listening"] .folio-phase-dot { background: #167665; }
+[data-voice-phase="thinking"] .folio-phase-dot, [data-voice-phase="connecting"] .folio-phase-dot { background: #94671b; }
+[data-voice-phase="speaking"] .folio-phase-dot { background: #4e57aa; }
+[data-voice-phase="thinking"] .folio-tap { background: #faf4e7; border-color: #c0a66b; }
+[data-voice-phase="speaking"] .folio-tap { background: #efeffc; border-color: #9096ce; }
+@keyframes folio-attention { from { opacity: .35; } to { opacity: 1; } }
+@keyframes folio-halo-pulse { from { transform: scale(.94); opacity: .5; } to { transform: scale(1.08); opacity: .08; } }
+@keyframes folio-answer { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .folio-character *, .folio-character.listening .folio-listen-waves { animation: none !important; }
+}
 .folio-character {
   max-width: 270px;
   margin: 0 auto 20px;

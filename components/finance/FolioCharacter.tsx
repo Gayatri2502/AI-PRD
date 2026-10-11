@@ -4,10 +4,12 @@ export default function FolioCharacter({
   speaking,
   listening,
   thinking,
+  paused = false,
 }: {
   speaking: boolean;
   listening: boolean;
   thinking: boolean;
+  paused?: boolean;
 }) {
   const state = listening
     ? "listening"
@@ -15,7 +17,7 @@ export default function FolioCharacter({
       ? "speaking"
       : thinking
         ? "thinking"
-        : "ready";
+        : paused ? "paused" : "ready";
   return (
     <div
       className={`folio-character ${state}`}
@@ -23,6 +25,16 @@ export default function FolioCharacter({
       aria-label={`Folio, your cartoon financial guide, ${state}`}
     >
       <svg viewBox="0 0 320 280" aria-hidden="true">
+        <circle className="folio-halo" cx="160" cy="140" r="115" fill="none" stroke="currentColor" strokeWidth="3" />
+        <g className="folio-listen-waves" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round">
+          <path d="M65 102q-18 20 0 40M51 92q-27 30 0 60M252 102q18 20 0 40M266 92q27 30 0 60" />
+        </g>
+        <g className="folio-thought" fill="currentColor">
+          <circle cx="237" cy="39" r="5" /><circle cx="255" cy="30" r="6" /><circle cx="276" cy="24" r="7" />
+        </g>
+        <g className="folio-voice-bars" fill="currentColor">
+          {[0, 1, 2, 3, 4].map(n => <rect key={n} x={249 + n * 9} y={170} width="5" height={25} rx="2.5" style={{ animationDelay: `${n * 95}ms` }} />)}
+        </g>
         <defs>
           <linearGradient id="folio-paper" x2=".8" y2="1">
             <stop stopColor="#fffef5" />
@@ -155,7 +167,7 @@ export default function FolioCharacter({
             ? "Folio is speaking"
             : thinking
               ? "Folio is thinking"
-              : "Ready when you are"}
+              : paused ? "Microphone off" : "Ready when you are"}
       </span>
     </div>
   );

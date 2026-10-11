@@ -7,6 +7,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
   businessId: string; consent: boolean; language: string; onComplete: (transcript: string) => void; onAction: (action: unknown) => Promise<unknown>;
 }) {
   const actionRef = useRef(onAction); actionRef.current = onAction;
+  const [hasStarted, setHasStarted] = useState(false);
   const [phase, setPhase] = useState("idle"), [reply, setReply] = useState(""), [error, setError] = useState(""), [selectedLanguage, setSelectedLanguage] = useState(language);
   const connection = useRef<RTCPeerConnection | null>(null), stream = useRef<MediaStream | null>(null), audio = useRef<HTMLAudioElement | null>(null);
   const active = useRef(false), turns = useRef<string[]>([]), timer = useRef<ReturnType<typeof setTimeout> | null>(null), generation = useRef(0);
@@ -26,6 +27,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
   async function start() {
     if (active.current) { stop(); return; }
     active.current = true; const run = ++generation.current;
+    setHasStarted(true);
     setPhase("permission"); setError(""); setReply("");
     timer.current = setTimeout(() => { setError("Connection timed out. Check microphone permission and tap to retry."); stop(); }, 45000);
     try {
@@ -37,6 +39,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       pc.ontrack = e => { if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setError("Tap Play on the audio control to hear Folio.")); } };
       pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && active.current) { setError("Voice disconnected. Tap Folio to reconnect."); stop(); } };
       const channel = pc.createDataChannel("oai-events");
+      channel.onclose = () => { if (active.current) { setError("Voice connection ended. Tap Folio to reconnect."); stop(); } };
       channel.onopen = () => {
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => { setError("Voice session ended after four minutes. Tap to continue."); stop(); }, 235000);
@@ -82,12 +85,12 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       stop();
     }
   }
-  return <div className="voice-zone folio-simple">
+  return <div className="voice-zone folio-simple" data-voice-phase={phase}>
     <button className="folio-tap" aria-label={phase === "idle" ? "Start OpenAI voice" : "End OpenAI voice"} aria-pressed={phase !== "idle"} disabled={!consent} onClick={() => void start()}>
-      <FolioCharacter listening={phase === "listening"} speaking={phase === "speaking"} thinking={["connecting", "thinking"].includes(phase)} />
+      <FolioCharacter listening={phase === "listening"} speaking={phase === "speaking"} thinking={["permission", "connecting", "thinking"].includes(phase)} paused={phase === "idle" && hasStarted} />
       <span className="folio-tap-label">{phase === "idle" ? "Tap to talk" : "Tap to end"}</span>
     </button>
-    <div className="folio-feedback" role="status" aria-live="polite"><strong>{{ idle: "Talk naturally with Folio", permission: "Allow microphone access", connecting: "Connecting to OpenAI…", listening: "I’m listening", thinking: "Thinking…", speaking: "Folio is speaking — you can interrupt" }[phase]}</strong></div>
+    <div className="folio-feedback" role="status" aria-live="polite"><span className="folio-phase-dot" aria-hidden="true" /><strong>{{ idle: hasStarted ? "Stopped · Microphone off" : "Ready · Tap Folio to begin", permission: "Waiting for microphone permission…", connecting: "Connecting your conversation…", listening: "Listening · Tell me about your business", thinking: "Got it · Preparing your answer…", speaking: "Speaking · You can interrupt me" }[phase]}</strong></div>
     {reply && <p>{reply}</p>}
     {error && <p role="alert">{error}</p>}
     <select aria-label="Voice language" disabled={phase !== "idle"} value={selectedLanguage} onChange={e => setSelectedLanguage(e.target.value)}>{["English", "Hindi", "Marathi", "Mixed"].map(x => <option key={x}>{x}</option>)}</select>
