@@ -1,7 +1,16 @@
 import { sameOrigin } from "@/lib/origin";
 import { NextRequest, NextResponse } from "next/server";
 import { authAdmin } from "@/lib/firebase/admin";
+import { currentUser } from "@/lib/firebase/server";
 export const runtime = "nodejs";
+export async function GET() {
+  try {
+    const user = await currentUser();
+    return NextResponse.json({ user }, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return NextResponse.json({ user: null }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
+}
 const cookie = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",

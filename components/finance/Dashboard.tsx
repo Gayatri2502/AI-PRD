@@ -57,6 +57,7 @@ export default function Dashboard() {
     [autoSendVoice, setAutoSendVoice] = useState(true),
     [callActive, setCallActive] = useState(false),
     [workspaceLoading, setWorkspaceLoading] = useState(true),
+    [signedIn, setSignedIn] = useState(false),
     [realtimeAvailable, setRealtimeAvailable] = useState(false),
     [speaking, setSpeaking] = useState(false),
     [voicePhase, setVoicePhase] = useState("idle"),
@@ -93,6 +94,9 @@ export default function Dashboard() {
     setVoicePhase("idle");
   }
   const loading = useRef(false);
+  const syncBlocked = useRef(false);
+  const activeJobs = useRef(false);
+  activeJobs.current = jobs.some(j => j.status === "queued" || j.status === "running");
   const saveInFlight = useRef(false),
     latestData = useRef(data);
   latestData.current = data;
@@ -114,11 +118,18 @@ export default function Dashboard() {
   }
   async function load(initial = false) {
     if (loading.current) return;
+    if (initial) syncBlocked.current = false;
+    if (syncBlocked.current) return;
     loading.current = true;
     try {
       const r = await fetch("/api/workspace", { cache: "no-store" });
       const j = await readJSON(r);
-      if (!r.ok) throw Error(j.error);
+      if (!r.ok) {
+        syncBlocked.current = true;
+        if (r.status === 401) setSignedIn(false);
+        throw Error(j.error);
+      }
+      setSignedIn(true);
       setUsage(j.usage);
       let b = j.business;
       if (!b && !businessRef.current) b = await api({ action: "create" });
@@ -164,9 +175,12 @@ export default function Dashboard() {
     }
   }
   useEffect(() => {
+    fetch("/api/auth/session", { cache: "no-store" }).then(r => r.json()).then(j => setSignedIn(Boolean(j.user))).catch(() => {});
     void load(true);
     fetch("/api/voice/realtime").then(r => r.json()).then(j => setRealtimeAvailable(j.available === true)).catch(() => {});
-    const timer = setInterval(() => void load(), 4000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible" && activeJobs.current) void load();
+    }, 15000);
     return () => {
       clearInterval(timer);
       callRef.current = false;
@@ -575,8 +589,8 @@ export default function Dashboard() {
         </Link>
         <div className="header-end">
           <span className="save-state">{saved}</span>
-          {!workspaceLoading && !business && <Link href="/login">Sign in</Link>}
-          {business && <button
+          {!workspaceLoading && !signedIn && <Link href="/login">Sign in</Link>}
+          {signedIn && <button
             className="icon-btn"
             aria-label="Sign out"
             onClick={() =>
@@ -635,11 +649,11 @@ export default function Dashboard() {
                   "Connecting to your private workspace…"
                 ) : (
                   <>
-                    <strong>Sign in to talk with Folio.</strong>
-                    <p>Your AI conversation needs an active account.</p>
-                    <Link className="primary small" href="/login">
+                    <strong>{signedIn ? "You’re signed in. Workspace sync is unavailable." : "Sign in to talk with Folio."}</strong>
+                    <p>{signedIn ? "Retry once the database is available. Your account remains signed in." : "Your AI conversation needs an active account."}</p>
+                    {!signedIn && <Link className="primary small" href="/login">
                       Sign in
-                    </Link>{" "}
+                    </Link>}{" "}
                     <button
                       className="secondary small"
                       onClick={() => void load(true)}

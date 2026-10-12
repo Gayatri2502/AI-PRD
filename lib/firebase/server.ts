@@ -25,6 +25,8 @@ export async function ownBusiness(id: string, userId: string) {
 }
 export function checked<T>(result: { data: T; error: unknown }) {
   if (result.error) {
+    if ((result.error as { code?: number }).code === 8)
+      throw Error("LIMIT: Firebase database quota is exhausted. Your sign-in is valid, but workspace sync is temporarily unavailable. Retry after the quota resets or increase the Firebase quota.");
     if (
       result.error instanceof Error &&
       /^(CONFIG|LIMIT|AUTH|INPUT):/.test(result.error.message)
