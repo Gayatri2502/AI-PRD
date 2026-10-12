@@ -9,3 +9,9 @@ node_modules
 *.tsbuildinfo
 .firebase
 *-service-account.json
+middleware 2.ts
+lib/firebase/admin 2.ts
+.firebaserc 2
+firebase 2.json
+firestore 2.rules
+firestore.indexes 2.json
