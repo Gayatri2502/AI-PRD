@@ -575,8 +575,8 @@ export default function Dashboard() {
         </Link>
         <div className="header-end">
           <span className="save-state">{saved}</span>
-          <Link href="/login">Sign in</Link>
-          <button
+          {!workspaceLoading && !business && <Link href="/login">Sign in</Link>}
+          {business && <button
             className="icon-btn"
             aria-label="Sign out"
             onClick={() =>
@@ -588,7 +588,7 @@ export default function Dashboard() {
             }
           >
             <LogOut size={18} />
-          </button>
+          </button>}
         </div>
       </header>
       <main id="main-content" className="workspace">
