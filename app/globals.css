@@ -1920,6 +1920,16 @@ textarea {
 .folio-source-notes { margin: 18px 0; font-size: 13px; color: #506675; }
 @media (max-width: 1000px) { .calculation-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 540px) { .calculation-activity { padding: 18px; } .calculation-heading { display: block; } .calculation-cards { grid-template-columns: 1fr; } }
+.folio-penguin { width: min(100%, 290px); margin: 0 auto; position: relative; }
+.folio-penguin-stage { position: relative; width: 100%; height: 290px; }
+.folio-penguin-stage canvas, .folio-penguin-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.folio-penguin-stage img { position: absolute; inset: 0; }
+.folio-penguin.listening { filter: drop-shadow(0 9px 13px #2b8f7515); }
+.folio-penguin.speaking { filter: drop-shadow(0 9px 13px #6558aa20); }
+.folio-penguin.paused { filter: saturate(.75); }
+.voice-zone:has(.folio-penguin) { background: radial-gradient(ellipse at 50% 45%, #edf8f0 0%, #f0f2fa80 65%, #ffffff40 100%); border: 1px solid #fff; border-radius: 26px; padding: 20px; }
+.folio-tap:has(.folio-penguin) { width: min(100%, 310px); padding: 0 10px 10px; }
+@media (max-width: 540px) { .folio-penguin-stage { height: 260px; } }
 .folio-character { color: #52706d; }
 .folio-halo { opacity: .18; transform-origin: 160px 140px; }
 .folio-listen-waves, .folio-thought, .folio-voice-bars { display: none; }

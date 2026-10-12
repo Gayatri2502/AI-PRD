@@ -9,6 +9,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
   const actionRef = useRef(onAction); actionRef.current = onAction;
   const [hasStarted, setHasStarted] = useState(false);
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
+  const voiceContext = useRef<AudioContext | null>(null), voiceAnalyser = useRef<AnalyserNode | null>(null);
   const [phase, setPhase] = useState("idle"), [reply, setReply] = useState(""), [error, setError] = useState(""), [selectedLanguage, setSelectedLanguage] = useState(language);
   const connection = useRef<RTCPeerConnection | null>(null), stream = useRef<MediaStream | null>(null), audio = useRef<HTMLAudioElement | null>(null);
   const active = useRef(false), turns = useRef<string[]>([]), timer = useRef<ReturnType<typeof setTimeout> | null>(null), generation = useRef(0);
@@ -18,6 +19,8 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
     connection.current?.close(); connection.current = null;
     stream.current?.getTracks().forEach(t => t.stop()); stream.current = null;
     if (audio.current) { audio.current.pause(); audio.current.srcObject = null; }
+    voiceAnalyser.current = null;
+    if (voiceContext.current) { void voiceContext.current.close().catch(() => undefined); voiceContext.current = null; }
     if (timer.current) clearTimeout(timer.current);
     setPhase("idle");
     if (save && turns.current.length) onComplete(turns.current.join("\n"));
@@ -32,6 +35,8 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
     setPhase("permission"); setError(""); setReply(""); setPlaybackBlocked(false);
     timer.current = setTimeout(() => { setError("Connection timed out. Check microphone permission and tap to retry."); stop(); }, 45000);
     try {
+      // Created during the tap gesture; the graph measures remote speech without playing it twice.
+      try { voiceContext.current = new AudioContext(); void voiceContext.current.resume().catch(() => undefined); } catch { /* Voice still works without visual metering. */ }
       const media = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       if (run !== generation.current) { media.getTracks().forEach(t => t.stop()); return; }
       stream.current = media;
@@ -40,7 +45,14 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       let greeting = true;
       const pc = new RTCPeerConnection(); connection.current = pc;
       media.getTracks().forEach(t => pc.addTrack(t, media));
-      pc.ontrack = e => { if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setPlaybackBlocked(true)); } };
+      pc.ontrack = e => {
+        if (run !== generation.current) return;
+        if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setPlaybackBlocked(true)); }
+        const context = voiceContext.current;
+        if (context && e.streams[0]) {
+          try { const source = context.createMediaStreamSource(e.streams[0]), meter = context.createAnalyser(), silent = context.createGain(); meter.fftSize = 256; silent.gain.value = 0; source.connect(meter); meter.connect(silent); silent.connect(context.destination); voiceAnalyser.current = meter; } catch { /* Keep voice playback working if analysis is unavailable. */ }
+        }
+      };
       pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && active.current && run === generation.current) { setError("Voice disconnected. Tap Folio to reconnect."); stop(); } };
       const channel = pc.createDataChannel("oai-events");
       channel.onclose = () => { if (active.current && run === generation.current) { setError("Voice connection ended. Tap Folio to reconnect."); stop(); } };
@@ -99,7 +111,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
   }
   return <div className="voice-zone folio-simple" data-voice-phase={phase}>
     <button className="folio-tap" aria-label={phase === "idle" ? "Start OpenAI voice" : "End OpenAI voice"} aria-pressed={phase !== "idle"} disabled={!consent} onClick={() => void start()}>
-      <FolioCharacter listening={phase === "listening"} speaking={phase === "speaking"} thinking={["permission", "connecting", "greeting", "thinking"].includes(phase)} paused={phase === "idle" && hasStarted} />
+      <FolioCharacter listening={phase === "listening"} speaking={phase === "speaking"} thinking={["permission", "connecting", "greeting", "thinking"].includes(phase)} paused={phase === "idle" && hasStarted} analyser={voiceAnalyser} />
       <span className="folio-tap-label">{phase === "idle" ? "Tap to talk" : "Tap to end"}</span>
     </button>
     <div className="folio-feedback" role="status" aria-live="polite"><span className="folio-phase-dot" aria-hidden="true" /><strong>{{ idle: error ? "Voice could not connect · Microphone off" : hasStarted ? "Stopped · Microphone off" : "Tap Folio · I’ll introduce myself first", permission: "Waiting for microphone permission…", connecting: "Connecting your conversation…", greeting: "Folio is getting ready to greet you…", listening: "Listening · Tell me about your business", thinking: "Got it · Preparing your answer…", speaking: "Folio is speaking" }[phase]}</strong></div>

@@ -1,0 +1,7 @@
+# Folio penguin
+
+The live character is an articulated Three.js model inspired by the supplied penguin reference, not an exact 3D reconstruction of the image. It uses a transparent canvas, pointer-following head/eyes, a hover/focus wave, blinking, and listening/thinking poses. The beak follows remote audio energy when available; this is amplitude animation, not phoneme lip-sync. Reduced-motion preferences suppress continuous gestures. GPU resources are released on unmount, and rendering pauses when offscreen or the page is hidden.
+
+`public/folio-penguin.png` is the transparent image fallback. Built-in image generation edited the supplied image with this prompt: “Create a clean transparent-background cutout of the cute 3D penguin character for a business assistant called Folio. Preserve the rounded navy-blue body, cream face and belly, large glossy friendly eyes, orange beak and feet, little head tuft, front-facing full-body pose and soft studio-rendered 3D lighting. Remove the black background and the stock-preview diagonal lines and lettering; clean uninterrupted character surfaces. No text or new branding. True alpha transparency around the complete character, no background or floor rectangle, no cropping of feet or tuft. Export a polished square PNG asset.”
+
+Validated PNG dimensions: 1254 × 1254; 898,788 fully transparent pixels. Browser preview verified WebGL rendering for ready/listening/thinking/speaking, focus wave and blink, with no console errors. Full live microphone conversation remains a separate manual verification.
