@@ -8,6 +8,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
 }) {
   const actionRef = useRef(onAction); actionRef.current = onAction;
   const [hasStarted, setHasStarted] = useState(false);
+  const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [phase, setPhase] = useState("idle"), [reply, setReply] = useState(""), [error, setError] = useState(""), [selectedLanguage, setSelectedLanguage] = useState(language);
   const connection = useRef<RTCPeerConnection | null>(null), stream = useRef<MediaStream | null>(null), audio = useRef<HTMLAudioElement | null>(null);
   const active = useRef(false), turns = useRef<string[]>([]), timer = useRef<ReturnType<typeof setTimeout> | null>(null), generation = useRef(0);
@@ -28,7 +29,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
     if (active.current) { stop(); return; }
     active.current = true; const run = ++generation.current;
     setHasStarted(true);
-    setPhase("permission"); setError(""); setReply("");
+    setPhase("permission"); setError(""); setReply(""); setPlaybackBlocked(false);
     timer.current = setTimeout(() => { setError("Connection timed out. Check microphone permission and tap to retry."); stop(); }, 45000);
     try {
       const media = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
@@ -39,7 +40,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
       let greeting = true;
       const pc = new RTCPeerConnection(); connection.current = pc;
       media.getTracks().forEach(t => pc.addTrack(t, media));
-      pc.ontrack = e => { if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setError("Tap Play on the audio control to hear Folio.")); } };
+      pc.ontrack = e => { if (audio.current) { audio.current.srcObject = e.streams[0]; void audio.current.play().catch(() => setPlaybackBlocked(true)); } };
       pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && active.current && run === generation.current) { setError("Voice disconnected. Tap Folio to reconnect."); stop(); } };
       const channel = pc.createDataChannel("oai-events");
       channel.onclose = () => { if (active.current && run === generation.current) { setError("Voice connection ended. Tap Folio to reconnect."); stop(); } };
@@ -105,7 +106,7 @@ export default function RealtimeVoice({ businessId, consent, language, onComplet
     {reply && <p>{reply}</p>}
     {error && <p role="alert">{error}</p>}
     <select aria-label="Voice language" disabled={phase !== "idle"} value={selectedLanguage} onChange={e => setSelectedLanguage(e.target.value)}>{["English", "Hindi", "Marathi", "Mixed"].map(x => <option key={x}>{x}</option>)}</select>
-    <audio ref={audio} autoPlay controls aria-label="Folio voice playback" style={{ width: "100%", height: 32 }} />
-    <small>Ask Folio to update your details, change report style, or review your report. Voice tokens sync with your daily usage. Calls last up to four minutes.</small>
+    <audio ref={audio} autoPlay hidden />
+    {playbackBlocked && <button className="secondary" onClick={() => { void audio.current?.play().then(() => setPlaybackBlocked(false)).catch(() => setError("Audio playback is blocked by your browser. Check site audio permissions.")); }}>Enable Folio’s voice</button>}
   </div>;
 }

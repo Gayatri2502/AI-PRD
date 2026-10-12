@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import CalculationActivity from "./CalculationActivity";
 import RealtimeVoice from "./RealtimeVoice";
 import { voiceActionSchema } from "@/lib/finance/voice-actions";
 import FolioCharacter from "./FolioCharacter";
@@ -602,26 +603,7 @@ export default function Dashboard() {
           </div>
           <span className="draft-pill">Drafts for review</span>
         </div>
-        {usage && (
-          <aside className="usage-strip" aria-label="Your daily AI usage">
-            <div>
-              <strong>{usage.total.toLocaleString()}</strong>
-              <span>AI tokens used today</span>
-            </div>
-            <div>
-              <strong>
-                {usage.jobs} / {usage.limit}
-              </strong>
-              <span>Free daily processing requests</span>
-            </div>
-            <p>
-              Input: {usage.input.toLocaleString()} · Output:{" "}
-              {usage.output.toLocaleString()}. Provider-reported tokens from
-              tracked requests; totals may include reasoning tokens. Allowance
-              resets at 00:00 UTC. Provider quotas also apply.
-            </p>
-          </aside>
-        )}
+        <CalculationActivity data={data} jobs={jobs as any} />
         {notice && (
           <div className="notice" role="status">
             {notice}
@@ -799,15 +781,7 @@ export default function Dashboard() {
               </details>
             </div>
             }
-            {messages.length > 0 && (
-              <div className="folio-latest">
-                <span>FOLIO</span>
-                <p>
-                  {[...messages].reverse().find((m) => m.role === "assistant")
-                    ?.content || "Thanks. I’m preparing your reply."}
-                </p>
-              </div>
-            )}
+            <details className="folio-source-notes"><summary>Review source notes & suggested inputs</summary>
             <details className="folio-history">
               <summary>
                 Conversation & editable transcripts ({messages.length})
@@ -906,6 +880,7 @@ export default function Dashboard() {
                 ))}
               </details>
             )}
+            </details>
             {jobs
               .filter((j) => j.kind === "conversation" && j.status === "failed")
               .slice(0, 1)

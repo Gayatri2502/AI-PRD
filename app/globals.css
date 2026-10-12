@@ -1901,6 +1901,25 @@ textarea {
   }
 }
 
+.calculation-activity { margin: 24px 0; padding: 26px; border: 1px solid #ffffffd9; border-radius: 24px; background: #ffffffb8; box-shadow: 0 12px 35px #17394908; }
+.calculation-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.calculation-heading h2 { display: flex; align-items: center; gap: 9px; margin: 6px 0 10px; font-size: 22px; }
+.calculation-heading p { color: #506675; font-size: 14px; }
+.calculation-cards { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 22px 0 18px; }
+.calculation-cards article { padding: 18px; border: 1px solid #dce7e7; border-radius: 16px; background: #f7fbfb; }
+.calculation-cards span, .calculation-cards strong, .calculation-cards small { display: block; }
+.calculation-cards span { font-size: 13px; color: #42616b; }
+.calculation-cards strong { margin: 12px 0; font-size: clamp(18px, 1.8vw, 25px); color: #163d49; overflow-wrap: anywhere; }
+.calculation-cards small { font-size: 12px; line-height: 1.6; color: #526974; }
+.calculation-status { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; color: #38605b; }
+.calculation-status svg { flex-shrink: 0; margin-top: 2px; }
+.calculation-activity details { margin-top: 16px; font-size: 13px; line-height: 1.7; color: #435e70; }
+.calculation-activity summary, .folio-source-notes > summary { cursor: pointer; font-weight: 600; }
+.calculation-activity ul { padding-left: 22px; }
+.calculation-job { font-size: 13px; padding: 10px 14px; border-radius: 10px; background: #edf3fa; }
+.folio-source-notes { margin: 18px 0; font-size: 13px; color: #506675; }
+@media (max-width: 1000px) { .calculation-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 540px) { .calculation-activity { padding: 18px; } .calculation-heading { display: block; } .calculation-cards { grid-template-columns: 1fr; } }
 .folio-character { color: #52706d; }
 .folio-halo { opacity: .18; transform-origin: 160px 140px; }
 .folio-listen-waves, .folio-thought, .folio-voice-bars { display: none; }
